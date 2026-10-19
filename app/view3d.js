@@ -582,11 +582,20 @@ function render() {
     return;
   }
 
+  phoneHud.hidden = false;
+  if (w > h * 1.4) {
+    // Wide canvas (phone in landscape): phone frame on the right, 3D view on the left.
+    const fw = Math.min(w * 0.5, h * VIDEO_ASPECT), fh = fw / VIDEO_ASPECT;
+    drawPhone(w - fw, (h - fh) / 2, fw, fh);
+    drawOrbit(0, 0, w - fw - 2, h);
+    phoneHud.style.top = `${(h - fh) / 2 + 6}px`;
+    phoneHud.style.left = `${w - fw + 6}px`;
+    return;
+  }
   // Split: phone frame along the bottom, 3D view above it with a 2px gap.
-  let fh = Math.min(w / VIDEO_ASPECT, h * 0.45), fw = fh * VIDEO_ASPECT;
+  const fh = Math.min(w / VIDEO_ASPECT, h * 0.45), fw = fh * VIDEO_ASPECT;
   drawPhone((w - fw) / 2, 0, fw, fh);
   drawOrbit(0, fh + 2, w, h - fh - 2);
-  phoneHud.hidden = false;
   phoneHud.style.top = `${h - fh + 6}px`;
   phoneHud.style.left = `${(w - fw) / 2 + 6}px`;
 }
