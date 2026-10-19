@@ -1,5 +1,5 @@
 import { COURT, recommend, serveHeights, serveOptions } from './geometry.js';
-import { PHONES, phoneLenses, DEFAULT_COURTS, DEFAULT_SETTINGS } from './data.js';
+import { PHONES, phoneLenses, DEFAULT_COURTS, DEFAULT_SETTINGS, STICK } from './data.js';
 import { requestSensorPermission, watchTilt } from './sensor.js';
 
 const $ = (s) => document.querySelector(s);
@@ -20,7 +20,7 @@ const store = {
 
 let courts = store.get('courts', DEFAULT_COURTS);
 // Bump when DEFAULT_SETTINGS change meaning, so stale saved values don't override them.
-const SETTINGS_VERSION = 2;
+const SETTINGS_VERSION = 3;
 const KEEP_ACROSS_VERSIONS = ['phone', 'mode', 'courtId', 'end', 'farPlayer'];
 let settings = loadSettings();
 
@@ -118,12 +118,21 @@ for (const [id, key, scale] of SERVE_FIELDS) {
 function mountFor(end) {
   const reach = settings.gripHeight + settings.handleLength;
   if (reach >= end.fenceHeight) {
-    return { height: end.fenceHeight + settings.stickAboveClamp, how: `Hook the fork over the ${fmt(end.fenceHeight, 1)} m top rail` };
+    return { height: end.fenceHeight + settings.stickAboveClamp, how: `Hook the fork over the ${fmt(end.fenceHeight, 1)} m top rail${sectionsHint(end.fenceHeight)}` };
   }
   if (reach < (end.wallHeight || 0)) {
     return { height: reach + settings.stickAboveClamp, how: `You can only lift the fork to ${fmt(reach, 1)} m, below the ${fmt(end.wallHeight, 1)} m wall – you'll need something to stand on` };
   }
-  return { height: reach + settings.stickAboveClamp, how: `Hook the fork into the mesh as high as you can lift it (~${fmt(reach, 1)} m)` };
+  return { height: reach + settings.stickAboveClamp, how: `Open all three lower sections and hook the fence knob into the mesh as high as you can lift it (fork rest ~${fmt(reach, 1)} m)` };
+}
+
+// How many of the lower sections to open so the fork rest reaches `rail` with the base held overhead.
+function sectionsHint(rail) {
+  // Scale the measured sections if the user has changed the pole length.
+  const k = (settings.handleLength - STICK.baseToRest) / STICK.lowerSections.reduce((a, b) => a + b, 0);
+  let len = STICK.baseToRest, n = 0;
+  while (settings.gripHeight + len < rail && n < STICK.lowerSections.length) len += STICK.lowerSections[n++] * k;
+  return n === 0 ? ' (lower sections closed)' : ` (open ${n === 3 ? 'all three' : n} lower section${n > 1 ? 's' : ''})`;
 }
 
 function update(syncHeightField = true) {

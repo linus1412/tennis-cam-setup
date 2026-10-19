@@ -42,17 +42,27 @@ export const DEFAULT_COURTS = [
 
 // Swing Stick (1st gen): a fork hooks over the top rail or into a hole in the mesh.
 // You hold the bottom of the pole overhead and lift the fork into place, so
-//   fork height  = grip height (hands overhead) + handle length below the fork
-//   camera height = fork height + ~0.8 m (top section fully raised; measured from
-//                   SwingVision's product photo)
-// Defaults: a 183 cm person grips ~2.3 m overhead; handle ~1.1 m (72" pole minus
-// the 24" top section, less a hand's width). Both are estimates – measure yours.
+//   fork height  = grip height (hands overhead) + pole length from the base up to the fork rest
+//   camera height = fork height + lens height above the fork rest
+// Measured on the user's 1st-gen Swing Stick (2026-10-19), all distances to the fork rest
+// (the part of the fork that sits on the top rail):
+//   base → rest: 54 cm collapsed; the three lower sections add 41 (lowest), 43, 43 cm → 181 cm
+//   rest → top of the phone clamp: 22 cm collapsed, 70 cm with the top section raised (+48 cm)
+//   rest → bottom jaw of the phone clamp ≈ 12 cm collapsed (from the photo), so 60 cm raised
+//   lens ≈ 1.4–5.8 cm above the bottom jaw, depending which way up the phone is clamped → 3.5 cm
+//   the fence-hook knob sits 3 cm below the rest.
+export const STICK = {
+  baseToRest: 0.54,
+  lowerSections: [0.43, 0.43, 0.41], // open the longer ones first
+  restToLensRaised: 0.635,
+  restToLensCollapsed: 0.155,
+};
 export const DEFAULT_SETTINGS = {
   phone: 'iphone-12',
   mode: 'singles',
   gripHeight: 2.3,
-  handleLength: 1.1,
-  stickAboveClamp: 0.8,
+  handleLength: 1.81,
+  stickAboveClamp: 0.64,
   farPlayer: true,
   // Serve check
   playerHeight: 1.83,

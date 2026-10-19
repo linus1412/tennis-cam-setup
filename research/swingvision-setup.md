@@ -200,3 +200,22 @@ Researched 2026-10-19 (second pass). This supersedes the "mostly UNCONFIRMED" ta
 - S6. Official 2nd Gen photo, `https://swing.vision/images/order/ss2g-height-measure.png` (22"), and `ss2g-diagram.png`.
 - S7. US 8,152,389 B1, "Camera support apparatus", https://patents.google.com/patent/US8152389B1/en (current assignee Mangolytics Inc.; reel/frame 062773/0413).
 - S8. "Mastering SwingVision Mount Setup: Tips & Tricks for Perfect Tennis Recording", https://www.youtube.com/watch?v=9pIStuFs_Mo (user, about 200 matches recorded).
+
+## Swing Stick 1st gen: the user's own measurements (2026-10-19)
+
+Measured with a tape on the user's stick. These replace the photo estimates above. "Rest" is the part of the fork that sits on the top rail; "knob" is the fence-hook knob ("nobble").
+
+| Measurement | Value |
+|---|---|
+| Top of phone clamp → base, everything collapsed | 76 cm |
+| Same, top section raised | 124 cm (top section adds 48 cm) |
+| Knob → base, collapsed | 51 cm (knob is 3 cm below the rest) |
+| Rest → base, collapsed | 54 cm |
+| Rest → base, only the lowest section open | 95 cm (+41) |
+| Rest → base, only the middle section open | 97 cm (+43) |
+| Rest → base, only the highest lower section open | 97 cm (+43) |
+| Rest → base, all three open (derived) | 181 cm |
+| Rest → bottom jaw of the phone clamp, collapsed | ≈ 12 cm (scaled from the user's photo; to confirm) |
+| Rest → camera lens, top section raised (derived) | ≈ 0.635 m (lens 1.4–5.8 cm above the jaw, depending which way up the phone is clamped) |
+
+This stick is longer than SwingVision's "22–72 in" diagram: about 76 cm collapsed and about 2.5 m fully extended.
