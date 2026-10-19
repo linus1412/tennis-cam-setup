@@ -13,7 +13,7 @@ const COLORS = {
   court: 0x3d7fb0,
   line: 0xffffff,
   lineOut: 0xe0402a, // court line outside the phone's frame
-  cone: 0xf2c94c,
+  cone: 0xff8a1f,
   net: 0x1b1f1d,
   post: 0x2c3a33,
   wall: 0x9a5a43,
@@ -290,22 +290,29 @@ function buildCone(g, s) {
   // Corner rays, in frame order: top-left, top-right, bottom-right, bottom-left.
   const corners = [[-1, 1], [1, 1], [1, -1], [-1, -1]].map(([sx, sy]) =>
     add3(add3(f.basis.fwd, f.basis.right, sx * f.tanH), f.basis.up, sy * f.tanV));
-  // Each ray stops at the ground, or at the far fence if it never reaches the ground.
+  // Each ray stops at the ground, or level with the far baseline if it never reaches the ground.
   const ends = corners.map((d) => {
     const tGround = d[2] < 0 ? -f.cam[2] / d[2] : Infinity;
-    const tFence = (yFar - f.cam[1]) / d[1];
-    return add3(f.cam, d, Math.min(tGround, tFence > 0 ? tFence : Infinity, 60));
+    const tFar = (COURT.length - f.cam[1]) / d[1];
+    return add3(f.cam, d, Math.min(tGround, tFar > 0 ? tFar : Infinity, 60));
   });
 
   const apex = V(...f.cam);
   const pts = [];
   for (let i = 0; i < 4; i++) pts.push(apex, V(...ends[i]), V(...ends[(i + 1) % 4]));
   const sides = new THREE.Mesh(new THREE.BufferGeometry().setFromPoints(pts),
-    new THREE.MeshBasicMaterial({ color: COLORS.cone, transparent: true, opacity: 0.07, side: THREE.DoubleSide, depthWrite: false }));
-  const edgePts = [];
-  for (let i = 0; i < 4; i++) edgePts.push(apex, V(...ends[i]));
-  const edges = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(edgePts),
-    new THREE.LineBasicMaterial({ color: COLORS.cone }));
+    new THREE.MeshBasicMaterial({ color: COLORS.cone, transparent: true, opacity: 0.08, side: THREE.DoubleSide, depthWrite: false }));
+  // WebGL lines are always 1px, so draw edges as thin tubes: four rays plus the rim.
+  const edges = new THREE.Group();
+  const edgeMat = new THREE.MeshBasicMaterial({ color: COLORS.cone });
+  for (let i = 0; i < 4; i++) {
+    // Taper from fine at the phone to thick far away, so edges read at overview distances.
+    edges.add(tube(apex, V(...ends[i]), 0.02, edgeMat, 0.14));
+    edges.add(tube(V(...ends[i]), V(...ends[(i + 1) % 4]), 0.12, edgeMat));
+  }
+  const marker = new THREE.Mesh(new THREE.SphereGeometry(0.3, 20, 12), edgeMat);
+  marker.position.copy(apex);
+  edges.add(marker);
 
   // Ground footprint: the surround clipped to the four sides of the frame.
   const halfOuter = COURT.doublesHalfWidth + SIDE_RUNOFF;
@@ -322,20 +329,30 @@ function buildCone(g, s) {
   if (poly.length >= 3) {
     const shape = new THREE.Shape(poly.map(([x, y]) => new THREE.Vector2(x, y)));
     const fill = new THREE.Mesh(new THREE.ShapeGeometry(shape),
-      new THREE.MeshBasicMaterial({ color: COLORS.cone, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide }));
+      new THREE.MeshBasicMaterial({ color: COLORS.cone, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide }));
     // Shape is drawn in the x/y plane; lay it flat on the ground (app y -> three −z).
     fill.rotation.x = -Math.PI / 2;
     fill.position.y = 0.006;
     footprint.add(fill);
-    const outline = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(poly.map(([x, y]) => V(x, y, 0.008))),
-      new THREE.LineBasicMaterial({ color: COLORS.cone }));
-    footprint.add(outline);
+    for (let i = 0; i < poly.length; i++) {
+      const [a, b] = [poly[i], poly[(i + 1) % poly.length]];
+      footprint.add(tube(V(a[0], a[1], 0.05), V(b[0], b[1], 0.05), 0.09, edgeMat));
+    }
   }
 
   for (const o of [sides, edges, footprint]) {
     o.traverse((c) => c.layers.set(OVERLAY));
     g.add(o);
   }
+}
+
+// A thin cylinder from a to b (three.js vectors), radius rA at a and rB at b.
+function tube(a, b, rA, material, rB = rA) {
+  const dir = b.clone().sub(a);
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(rB, rA, dir.length(), 8, 1, true), material);
+  m.position.copy(a).addScaledVector(dir, 0.5);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+  return m;
 }
 
 // Sutherland–Hodgman: keep the part of a 2D polygon where side(p) >= 0.
