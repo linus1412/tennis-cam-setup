@@ -39,11 +39,12 @@ export const DEFAULT_COURTS = [
 ];
 
 // Swing Stick: the phone sits ~0.6 m above where the stick clamps (one review; unconfirmed).
-// maxClampHeight = highest point on a fence you can actually clamp the stick to.
+// maxClampHeight = highest point on a fence you can clamp the stick to. Default: a 183 cm
+// person reaches ~2.43 m (1.33 × height) at full stretch; ~2.3 m to work a clamp.
 export const DEFAULT_SETTINGS = {
   phone: 'iphone-12',
   mode: 'singles',
   stickAboveClamp: 0.6,
-  maxClampHeight: 3.0,
+  maxClampHeight: 2.3,
   farPlayer: true,
 };
