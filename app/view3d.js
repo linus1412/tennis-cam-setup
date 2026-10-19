@@ -25,7 +25,7 @@ const PHONE = { long: 0.147, short: 0.0715, thick: 0.0074 }; // iPhone 12, lands
 
 let renderer, scene, cam, controls, root, container, hud, setup, frame = null;
 // What the phone sees: same position and tilt as the phone, its zoom's field of view, 16:9.
-let phoneCam, mode = 'orbit';
+let phoneCam, mode = 'orbit', split = true, phoneHud;
 const VIDEO_ASPECT = 16 / 9;
 
 export function mount(el, s) {
@@ -34,6 +34,14 @@ export function mount(el, s) {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   container.querySelector('.scene-canvas').appendChild(renderer.domElement);
   hud = container.querySelector('.scene-hud');
+  phoneHud = container.querySelector('.phone-hud');
+  const toggle = container.querySelector('#splitToggle');
+  toggle.addEventListener('click', () => {
+    split = !split;
+    toggle.classList.toggle('on', split);
+    toggle.setAttribute('aria-pressed', String(split));
+    requestRender();
+  });
 
   scene = new THREE.Scene();
   scene.background = new THREE.Color(COLORS.sky);
@@ -273,8 +281,6 @@ function resize() {
   const w = el.clientWidth, h = el.clientHeight;
   if (!w || !h) return;
   renderer.setSize(w, h, false);
-  cam.aspect = w / h;
-  cam.updateProjectionMatrix();
   requestRender();
 }
 
@@ -288,24 +294,51 @@ function requestRender() {
   });
 }
 
+// Viewports use WebGL's bottom-left origin.
 function render() {
   const el = renderer.domElement;
   const w = el.clientWidth, h = el.clientHeight;
-  if (mode !== 'phone') {
-    renderer.setScissorTest(false);
-    renderer.setViewport(0, 0, w, h);
-    renderer.render(scene, cam);
-    return;
-  }
-  // Letterbox the 16:9 phone frame inside the canvas.
-  let fw = w, fh = w / VIDEO_ASPECT;
-  if (fh > h) { fh = h; fw = h * VIDEO_ASPECT; }
-  const x = (w - fw) / 2, y = (h - fh) / 2;
   renderer.setScissorTest(true);
   renderer.setScissor(0, 0, w, h);
   renderer.setClearColor(0x000000, 1);
   renderer.clear();
-  renderer.setViewport(x, y, fw, fh);
-  renderer.setScissor(x, y, fw, fh);
+
+  if (mode === 'phone') {
+    // Letterbox the 16:9 phone frame in the middle of the canvas.
+    let fw = w, fh = w / VIDEO_ASPECT;
+    if (fh > h) { fh = h; fw = h * VIDEO_ASPECT; }
+    drawPhone((w - fw) / 2, (h - fh) / 2, fw, fh);
+    phoneHud.hidden = true;
+    return;
+  }
+
+  if (!split) {
+    drawOrbit(0, 0, w, h);
+    phoneHud.hidden = true;
+    return;
+  }
+
+  // Split: phone frame along the bottom, 3D view above it with a 2px gap.
+  let fh = Math.min(w / VIDEO_ASPECT, h * 0.45), fw = fh * VIDEO_ASPECT;
+  drawPhone((w - fw) / 2, 0, fw, fh);
+  drawOrbit(0, fh + 2, w, h - fh - 2);
+  phoneHud.hidden = false;
+  phoneHud.style.top = `${h - fh + 6}px`;
+  phoneHud.style.left = `${(w - fw) / 2 + 6}px`;
+}
+
+function drawOrbit(x, y, w, h) {
+  if (Math.abs(cam.aspect - w / h) > 1e-3) {
+    cam.aspect = w / h;
+    cam.updateProjectionMatrix();
+  }
+  renderer.setViewport(x, y, w, h);
+  renderer.setScissor(x, y, w, h);
+  renderer.render(scene, cam);
+}
+
+function drawPhone(x, y, w, h) {
+  renderer.setViewport(x, y, w, h);
+  renderer.setScissor(x, y, w, h);
   renderer.render(scene, phoneCam);
 }

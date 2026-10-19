@@ -119,11 +119,15 @@
       <div class="scene" id="scene">
         <div class="scene-canvas"></div>
         <div class="scene-hud"></div>
-        <div class="seg scene-views">
-          <button data-view="phone">Phone</button><button data-view="iso">3D</button><button data-view="top">Top</button><button data-view="side">Side</button><button data-view="stick">Stick</button>
+        <div class="scene-hud phone-hud" hidden>Phone view</div>
+        <div class="scene-bar">
+          <div class="seg scene-views">
+            <button data-view="phone">Phone</button><button data-view="iso">3D</button><button data-view="top">Top</button><button data-view="side">Side</button><button data-view="stick">Stick</button>
+          </div>
+          <button class="split-toggle on" id="splitToggle" aria-pressed="true" title="Show the phone's view under the 3D view">Split</button>
         </div>
       </div>
-      <p class="hint">Drag to orbit, pinch to zoom, two fingers to pan. Change the setup on the Setup tab.</p>
+      <p class="hint">Drag to orbit, pinch to zoom, two fingers to pan. Split shows the phone's view underneath. Change the setup on the Setup tab.</p>
     </section>
 
     <!-- COURTS -->

@@ -112,10 +112,15 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 svg { width: 100%; height: auto; display: block; }
 
 .scene { position: relative; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); margin-bottom: 10px; }
-.scene-canvas { height: min(62vh, 520px); touch-action: none; }
+.scene-canvas { height: min(72vh, 640px); touch-action: none; }
 .scene-canvas canvas { display: block; width: 100%; height: 100%; }
 .scene-hud { position: absolute; top: 8px; left: 8px; padding: 4px 8px; border-radius: 8px; background: rgba(15,26,20,.72); color: #fff; font-size: 13px; font-variant-numeric: tabular-nums; }
-.scene-views { position: absolute; left: 8px; right: 8px; bottom: 8px; background: var(--card); }
+.scene-bar { display: flex; gap: 6px; padding: 8px; background: var(--card); border-top: 1px solid var(--line); }
+.scene-views { flex: 1; }
+.scene-views button, .split-toggle { padding: 8px 4px; font-size: 14px; }
+.split-toggle { flex: 0 0 auto; padding: 8px 12px; }
+.split-toggle.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.phone-hud { top: auto; }
 .scene.phone-mode .scene-canvas { background: #000; }
 
 .level { text-align: center; }
