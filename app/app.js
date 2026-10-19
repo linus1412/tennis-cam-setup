@@ -146,7 +146,7 @@ function update(syncHeightField = true) {
   const recHeight = mount.height;
   const height = state.height ?? recHeight;
   if (syncHeightField) $('#height').value = fmt(height);
-  const r = recommend({ ...base, maxHeight: height });
+  const r = recommend({ ...base, maxHeight: height, serve: serveHeights(settings) });
   applyChoice(r);
   state.target = r.chosen.pitch;
   $('#targetInput').value = fmt(state.target, 0);
@@ -177,7 +177,7 @@ function applyChoice(r) {
 function renderServe(r, base) {
   const sh = serveHeights(settings);
   $('#serveHeights').innerHTML = `Contact ≈ <b>${fmt(sh.contact)} m</b> · toss peak ≈ <b>${fmt(sh.toss)} m</b>`;
-  const opts = serveOptions({ ...base, height: r.height, distBehind: r.distBehind });
+  const opts = serveOptions({ ...base, height: r.height, distBehind: r.distBehind, serve: sh });
   const mark = (top) => top >= sh.toss ? ['vis-toss', '●'] : top >= sh.contact ? ['vis-contact', '◐'] : ['vis-cut', '○'];
   const cell = (top) => { const [c, m] = mark(top); return `<td class="${c}">${m} ${fmt(top, 1)} m</td>`; };
   const rows = [];
@@ -187,7 +187,7 @@ function renderServe(r, base) {
       const sel = r.chosen.id === o.lens.id && Math.abs(r.chosen.pitch - t.pitch) < 0.05;
       const rec = !state.choice && sel ? ' <span class="rec">recommended</span>' : '';
       rows.push(`<tr data-lens="${o.lens.id}" data-pitch="${t.pitch}" class="${sel ? 'sel' : ''}">
-        <td>${o.lens.id}</td><td>${fmt(t.pitch, 0)}°${t.kind === 'aim high' ? ' ↑' : ''}${rec}</td>${cell(t.near)}${cell(t.far)}</tr>`);
+        <td>${o.lens.id}</td><td>${fmt(t.pitch, 0)}°${t.kind === 'aim high' ? ' ↑' : t.kind === 'serve' ? ' <span class="tag">serve</span>' : ''}${rec}</td>${cell(t.near)}${cell(t.far)}</tr>`);
     }
   }
   const tooTight = opts.filter((o) => !o.fits).map((o) => o.lens.id);
@@ -222,8 +222,15 @@ function renderResult(r, { end, recHeight, mount }) {
   if (!lens.fits) {
     msgs.push(['warn', `Even ${lens.name} can't fit the whole ${settings.mode} court from here.`]);
   } else {
-    if (!lens.picked) msgs.push(['info', `Zoom ${lens.id} is the tightest that keeps all four corners in view from ${fmt(r.distBehind)} m back.`]);
-    if (lens.pitchRange) msgs.push(['info', `Anything from ${fmt(lens.pitchRange[0], 0)}° to ${fmt(lens.pitchRange[1], 0)}° keeps the court in frame${lens.picked ? '' : `; ${fmt(lens.pitch, 0)}° leaves the most room at the edges`}.`]);
+    if (!lens.picked) {
+      msgs.push(['info', lens.forServe
+        ? `Zoom ${lens.id} is the tightest that keeps all four corners and both servers' tosses in view from ${fmt(r.distBehind)} m back.`
+        : `Zoom ${lens.id} is the tightest that keeps all four corners in view from ${fmt(r.distBehind)} m back.`]);
+    }
+    const why = lens.picked ? '' : lens.forServe
+      ? `; ${fmt(lens.pitch, 0)}° is the most tilt that still shows both tosses, leaving the most room below your baseline`
+      : `; ${fmt(lens.pitch, 0)}° leaves the most room at the edges`;
+    if (lens.pitchRange) msgs.push(['info', `Anything from ${fmt(lens.pitchRange[0], 0)}° to ${fmt(lens.pitchRange[1], 0)}° keeps the court in frame${why}.`]);
   }
 
   $('#result').innerHTML = `

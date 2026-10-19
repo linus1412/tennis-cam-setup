@@ -141,6 +141,7 @@ export function solvePitch({ height, distBehind, offsetX = 0, mode, fov, farPlay
     pitchRange: ok.length ? [ok[0], ok[ok.length - 1]] : null,
     // Highest aim (least tilt) that still leaves a little room around the court.
     highestAim: comfy.length ? comfy[0] : null,
+    comfyRange: comfy.length ? [comfy[0], comfy[comfy.length - 1]] : null,
   };
 }
 
@@ -181,25 +182,44 @@ function serveVisibility(pitch, opts) {
   return { near: Math.min(...near), far: Math.min(...far) };
 }
 
+// Steepest whole-degree tilt that still shows both servers' toss peaks with a little to
+// spare – the most room below the near baseline without losing the far server's toss.
+export const SERVE_SPARE = 0.1;
+function serveTilt(sol, opts, serve) {
+  if (!serve || !sol.comfyRange) return null;
+  for (let p = Math.floor(sol.comfyRange[1]); p >= Math.ceil(sol.comfyRange[0]); p--) {
+    const vis = serveVisibility(p, opts);
+    if (Math.min(vis.near, vis.far) >= serve.toss + SERVE_SPARE) return p;
+  }
+  return null;
+}
+
 // For each lens/zoom: keep the court in frame, and report how much of the serve each end shows
-// at the recommended tilt and at the highest aim the court allows.
-export function serveOptions({ height, distBehind, offsetX = 0, mode, lenses, farPlayer = true }) {
+// at the recommended tilt, the serve tilt (when there is one) and the highest aim the court allows.
+export function serveOptions({ height, distBehind, offsetX = 0, mode, lenses, farPlayer = true, serve }) {
   return lenses.map((lens) => {
     const sol = solvePitch({ height, distBehind, offsetX, mode, fov: lens.fov, farPlayer });
     if (!sol.fits) return { lens, fits: false };
     const opts = { height, distBehind, offsetX, yaw: sol.yaw, fov: lens.fov };
     const tilts = [{ kind: 'centred', pitch: sol.pitch }];
-    if (sol.highestAim != null && sol.highestAim < sol.pitch - 0.5) tilts.push({ kind: 'aim high', pitch: sol.highestAim });
+    const st = serveTilt(sol, opts, serve);
+    if (st != null && Math.abs(st - sol.pitch) >= 0.5) tilts.push({ kind: 'serve', pitch: st });
+    if (sol.highestAim != null && sol.highestAim < sol.pitch - 0.5 && (st == null || Math.abs(st - sol.highestAim) >= 0.5)) {
+      tilts.push({ kind: 'aim high', pitch: sol.highestAim });
+    }
     return {
       lens,
       fits: true,
+      serveTilt: st,
       tilts: tilts.map((t) => ({ ...t, ...serveVisibility(t.pitch, opts) })),
     };
   });
 }
 
 // Full recommendation for one court end.
-export function recommend({ end, net, mode, lenses, maxHeight, offsetX = 0, standoff = 0, farPlayer = true }) {
+// With `serve` ({ contact, toss }), prefer the narrowest zoom that can also show both servers'
+// tosses, at its serve tilt.
+export function recommend({ end, net, mode, lenses, maxHeight, offsetX = 0, standoff = 0, farPlayer = true, serve }) {
   const distBehind = Math.max(end.runback - standoff, 0.1);
   const minH = minHeightForServiceLine({ distBehind, offsetX, mode, net });
   // Higher is better for SwingVision tracking; use the highest reachable height.
@@ -210,8 +230,12 @@ export function recommend({ end, net, mode, lenses, maxHeight, offsetX = 0, stan
     ...solvePitch({ height, distBehind, offsetX, mode, fov: lens.fov, farPlayer }),
   }));
   // Prefer the narrowest lens that fits with a little spare (more pixels on the ball).
-  const fitting = lensResults.filter((l) => l.fits && l.margin >= 0.03);
-  const chosen = fitting.sort((a, b) => b.eqFocal - a.eqFocal)[0]
-    || lensResults.slice().sort((a, b) => b.margin - a.margin)[0];
+  const fitting = lensResults.filter((l) => l.fits && l.margin >= 0.03).sort((a, b) => b.eqFocal - a.eqFocal);
+  for (const l of lensResults) {
+    l.serveTilt = serveTilt(l, { height, distBehind, offsetX, yaw: l.yaw, fov: l.fov }, serve);
+  }
+  const forServe = fitting.find((l) => l.serveTilt != null);
+  const chosen = forServe ? { ...forServe, pitch: forServe.serveTilt, centred: forServe.pitch, forServe: true }
+    : fitting[0] || lensResults.slice().sort((a, b) => b.margin - a.margin)[0];
   return { distBehind, height, minHeight: minH, heightOk: height >= minH, clearance, lenses: lensResults, chosen };
 }

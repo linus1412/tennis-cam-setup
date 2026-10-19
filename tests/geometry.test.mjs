@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { lensFov, minHeightForServiceLine, recommend, serveHeights, serveOptions } from '../app/geometry.js';
 import { tiltFromOrientation } from '../app/sensor.js';
+import { phoneLenses } from '../app/data.js';
 
 const net = { post: 1.06, centre: 0.895 };
 const lenses = [
@@ -47,4 +48,21 @@ test('aiming higher shows more above the far server', () => {
   const [centred, high] = wide.tilts;
   assert.ok(high.pitch < centred.pitch);
   assert.ok(high.far > centred.far);
+});
+
+test('serve tilt: most tilt that keeps both tosses in, and it drives the recommendation', () => {
+  const serve = { contact: 2.96, toss: 3.56 };
+  const base = { end: { runback: 4.72 }, net, mode: 'singles', lenses: phoneLenses('iphone-12'), maxHeight: 4.75, farPlayer: false, serve };
+  const r = recommend(base);
+  // Albert Club End A: 0.8× at 25°, not the 0.9× that can't show the far toss.
+  assert.ok(r.chosen.forServe);
+  assert.equal(r.chosen.id, '0.8×');
+  assert.equal(r.chosen.pitch, 25);
+  const opts = serveOptions({ height: 4.75, distBehind: 4.72, mode: 'singles', lenses: [r.chosen], farPlayer: false, serve });
+  const row = opts[0].tilts.find((t) => t.kind === 'serve');
+  assert.equal(row.pitch, r.chosen.pitch);
+  assert.ok(Math.min(row.near, row.far) >= serve.toss);
+  // The centred tilt (steeper here) cuts off the far server's toss.
+  const centred = opts[0].tilts.find((t) => t.kind === 'centred');
+  assert.ok(centred.pitch > row.pitch && centred.far < serve.toss);
 });

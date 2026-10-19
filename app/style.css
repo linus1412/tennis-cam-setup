@@ -93,6 +93,7 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 .serve-table tbody tr { cursor: pointer; }
 .serve-table tr.sel td { background: color-mix(in srgb, var(--accent) 18%, transparent); }
 .serve-table .rec { font-size: 11px; color: var(--muted); }
+.serve-table .tag { font-size: 11px; color: var(--ball); }
 .vis-toss { color: var(--ok); }
 .vis-contact { color: var(--ink); }
 .vis-cut { color: var(--warn); }
