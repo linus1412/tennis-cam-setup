@@ -116,6 +116,7 @@ svg { width: 100%; height: auto; display: block; }
 .scene-canvas canvas { display: block; width: 100%; height: 100%; }
 .scene-hud { position: absolute; top: 8px; left: 8px; padding: 4px 8px; border-radius: 8px; background: rgba(15,26,20,.72); color: #fff; font-size: 13px; font-variant-numeric: tabular-nums; }
 .scene-views { position: absolute; left: 8px; right: 8px; bottom: 8px; background: var(--card); }
+.scene.phone-mode .scene-canvas { background: #000; }
 
 .level { text-align: center; }
 .level .primary { width: 100%; }

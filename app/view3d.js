@@ -24,6 +24,9 @@ const SIDE_RUNOFF = 3.66;
 const PHONE = { long: 0.147, short: 0.0715, thick: 0.0074 }; // iPhone 12, landscape
 
 let renderer, scene, cam, controls, root, container, hud, setup, frame = null;
+// What the phone sees: same position and tilt as the phone, its zoom's field of view, 16:9.
+let phoneCam, mode = 'orbit';
+const VIDEO_ASPECT = 16 / 9;
 
 export function mount(el, s) {
   container = el;
@@ -40,6 +43,7 @@ export function mount(el, s) {
   scene.add(sun);
 
   cam = new THREE.PerspectiveCamera(45, 1, 0.05, 300);
+  phoneCam = new THREE.PerspectiveCamera(40, VIDEO_ASPECT, 0.1, 300);
   controls = new OrbitControls(cam, renderer.domElement);
   controls.enableDamping = true;
   controls.maxPolarAngle = Math.PI / 2 - 0.02; // stay above the ground
@@ -66,8 +70,24 @@ export function update(s) {
   buildFences(root, s);
   buildRig(root, s);
   scene.add(root);
-  hud.textContent = `${s.r.height.toFixed(2)} m · ${s.r.chosen.pitch.toFixed(0)}° down · ${s.r.chosen.id} · ${s.mode}`;
+  placePhoneCam(s);
+  renderHud();
   requestRender();
+}
+
+function renderHud() {
+  const s = setup;
+  const prefix = mode === 'phone' ? 'Phone view · ' : '';
+  hud.textContent = `${prefix}${s.r.height.toFixed(2)} m · ${s.r.chosen.pitch.toFixed(0)}° down · ${s.r.chosen.id} · ${s.mode}`;
+}
+
+// three.js cameras look along −z, the same way as the phone's rear camera in buildRig.
+function placePhoneCam(s) {
+  const { r, offset = 0 } = s;
+  phoneCam.fov = r.chosen.fov.v;
+  phoneCam.updateProjectionMatrix();
+  phoneCam.position.copy(V(offset, -r.distBehind + 0.06, r.height));
+  phoneCam.rotation.set(-THREE.MathUtils.degToRad(r.chosen.pitch), -THREE.MathUtils.degToRad(r.chosen.yaw || 0), 0, 'YXZ');
 }
 
 // ---------- scene pieces ----------
@@ -220,9 +240,14 @@ function presets() {
 }
 
 function goTo(name, animate = true) {
+  container.querySelectorAll('[data-view]').forEach((b) => b.classList.toggle('on', b.dataset.view === name));
+  mode = name === 'phone' ? 'phone' : 'orbit';
+  controls.enabled = mode === 'orbit';
+  container.classList.toggle('phone-mode', mode === 'phone');
+  renderHud();
+  if (mode === 'phone') return requestRender();
   const p = presets()[name];
   if (!p) return;
-  container.querySelectorAll('[data-view]').forEach((b) => b.classList.toggle('on', b.dataset.view === name));
   if (!animate) {
     cam.position.copy(p.pos);
     controls.target.copy(p.target);
@@ -264,5 +289,23 @@ function requestRender() {
 }
 
 function render() {
-  renderer.render(scene, cam);
+  const el = renderer.domElement;
+  const w = el.clientWidth, h = el.clientHeight;
+  if (mode !== 'phone') {
+    renderer.setScissorTest(false);
+    renderer.setViewport(0, 0, w, h);
+    renderer.render(scene, cam);
+    return;
+  }
+  // Letterbox the 16:9 phone frame inside the canvas.
+  let fw = w, fh = w / VIDEO_ASPECT;
+  if (fh > h) { fh = h; fw = h * VIDEO_ASPECT; }
+  const x = (w - fw) / 2, y = (h - fh) / 2;
+  renderer.setScissorTest(true);
+  renderer.setScissor(0, 0, w, h);
+  renderer.setClearColor(0x000000, 1);
+  renderer.clear();
+  renderer.setViewport(x, y, fw, fh);
+  renderer.setScissor(x, y, fw, fh);
+  renderer.render(scene, phoneCam);
 }
