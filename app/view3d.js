@@ -14,7 +14,7 @@ const COLORS = {
   line: 0xffffff,
   lineOut: 0xe0402a, // court line outside the phone's frame
   cone: 0xff8a1f,
-  shadow: 0x2a0f3d,
+  shadow: 0x4b2470,
   net: 0x1b1f1d,
   post: 0x2c3a33,
   wall: 0x9a5a43,
@@ -317,10 +317,10 @@ function buildCone(g, s) {
   const edgeMat = new THREE.MeshBasicMaterial({ color: COLORS.cone });
   for (let i = 0; i < 4; i++) {
     // Taper from fine at the phone to thick far away, so edges read at overview distances.
-    edges.add(tube(apex, V(...ends[i]), 0.02, edgeMat, 0.14));
-    edges.add(tube(V(...ends[i]), V(...ends[(i + 1) % 4]), 0.12, edgeMat));
+    edges.add(tube(apex, V(...ends[i]), 0.01, edgeMat, 0.06));
+    edges.add(tube(V(...ends[i]), V(...ends[(i + 1) % 4]), 0.05, edgeMat));
   }
-  const marker = new THREE.Mesh(new THREE.SphereGeometry(0.3, 20, 12), edgeMat);
+  const marker = new THREE.Mesh(new THREE.SphereGeometry(0.2, 20, 12), edgeMat);
   marker.position.copy(apex);
   edges.add(marker);
 
@@ -346,7 +346,7 @@ function buildCone(g, s) {
     footprint.add(fill);
     for (let i = 0; i < poly.length; i++) {
       const [a, b] = [poly[i], poly[(i + 1) % poly.length]];
-      footprint.add(tube(V(a[0], a[1], 0.05), V(b[0], b[1], 0.05), 0.09, edgeMat));
+      footprint.add(tube(V(a[0], a[1], 0.05), V(b[0], b[1], 0.05), 0.045, edgeMat));
     }
   }
 
@@ -386,7 +386,7 @@ function buildNetShadow(g, s) {
   const poly = [[-px, yNet], [px, yNet], ...edge.reverse()];
   const shape = new THREE.Shape(poly.map(([x, y]) => new THREE.Vector2(x, y)));
   const mesh = new THREE.Mesh(new THREE.ShapeGeometry(shape),
-    new THREE.MeshBasicMaterial({ color: COLORS.shadow, transparent: true, opacity: 0.4, depthWrite: false, side: THREE.DoubleSide }));
+    new THREE.MeshBasicMaterial({ color: COLORS.shadow, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide }));
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.y = 0.03;
   mesh.layers.set(OVERLAY);
