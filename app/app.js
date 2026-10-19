@@ -19,7 +19,17 @@ const store = {
 };
 
 let courts = store.get('courts', DEFAULT_COURTS);
-let settings = { ...DEFAULT_SETTINGS, ...store.get('settings', {}) };
+// Bump when DEFAULT_SETTINGS change meaning, so stale saved values don't override them.
+const SETTINGS_VERSION = 2;
+const KEEP_ACROSS_VERSIONS = ['phone', 'mode', 'courtId', 'end', 'farPlayer'];
+let settings = loadSettings();
+
+function loadSettings() {
+  const saved = store.get('settings', {});
+  if (saved.v === SETTINGS_VERSION) return { ...DEFAULT_SETTINGS, ...saved };
+  const kept = Object.fromEntries(KEEP_ACROSS_VERSIONS.filter((k) => k in saved).map((k) => [k, saved[k]]));
+  return { ...DEFAULT_SETTINGS, ...kept };
+}
 const state = {
   courtId: settings.courtId || courts[0]?.id,
   end: settings.end || 'A',
@@ -30,7 +40,7 @@ const state = {
 };
 
 const saveCourts = () => store.set('courts', courts);
-const saveSettings = () => store.set('settings', { ...settings, courtId: state.courtId, end: state.end });
+const saveSettings = () => store.set('settings', { ...settings, courtId: state.courtId, end: state.end, v: SETTINGS_VERSION });
 const currentCourt = () => courts.find((c) => c.id === state.courtId) || courts[0];
 const courtLabel = (c) => [c.club, c.name].filter(Boolean).join(' – ');
 
@@ -451,4 +461,9 @@ $('#stickAbove').value = settings.stickAboveClamp;
 loadForm(currentCourt());
 update();
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator) {
+  // When an update takes over, reload once so the page and its files are all the same version.
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController) location.reload(); });
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
