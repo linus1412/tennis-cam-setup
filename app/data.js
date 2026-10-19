@@ -48,14 +48,14 @@ export const DEFAULT_COURTS = [
 // (the part of the fork that sits on the top rail):
 //   base → rest: 54 cm collapsed; the three lower sections add 41 (lowest), 43, 43 cm → 181 cm
 //   rest → top of the phone clamp: 22 cm collapsed, 70 cm with the top section raised (+48 cm)
-//   rest → bottom jaw of the phone clamp ≈ 12 cm collapsed (from the photo), so 60 cm raised
-//   lens ≈ 1.4–5.8 cm above the bottom jaw, depending which way up the phone is clamped → 3.5 cm
+//   rest → bottom jaw of the phone clamp ≈ 12.5 cm collapsed (scaled from the user's photo), so 60.5 cm raised
+//   lens ≈ 1.3–5.9 cm above the bottom jaw, depending which way up the phone is clamped → 3.5 cm
 //   the fence-hook knob sits 3 cm below the rest.
 export const STICK = {
   baseToRest: 0.54,
   lowerSections: [0.43, 0.43, 0.41], // open the longer ones first
-  restToLensRaised: 0.635,
-  restToLensCollapsed: 0.155,
+  restToLensRaised: 0.64,
+  restToLensCollapsed: 0.16,
 };
 export const DEFAULT_SETTINGS = {
   phone: 'iphone-12',

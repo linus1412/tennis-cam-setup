@@ -215,7 +215,7 @@ Measured with a tape on the user's stick. These replace the photo estimates abov
 | Rest → base, only the middle section open | 97 cm (+43) |
 | Rest → base, only the highest lower section open | 97 cm (+43) |
 | Rest → base, all three open (derived) | 181 cm |
-| Rest → bottom jaw of the phone clamp, collapsed | ≈ 12 cm (scaled from the user's photo; to confirm) |
-| Rest → camera lens, top section raised (derived) | ≈ 0.635 m (lens 1.4–5.8 cm above the jaw, depending which way up the phone is clamped) |
+| Rest → bottom jaw of the phone clamp, collapsed | ≈ 12.5 cm (scaled from the user's photo: 22.6 px/cm; to confirm) |
+| Rest → camera lens, top section raised (derived) | ≈ 0.64 m (lens 1.3–5.9 cm above the jaw, depending which way up the phone is clamped) |
 
 This stick is longer than SwingVision's "22–72 in" diagram: about 76 cm collapsed and about 2.5 m fully extended.
