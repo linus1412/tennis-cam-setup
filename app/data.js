@@ -34,23 +34,24 @@ export const DEFAULT_COURTS = [
     name: 'Court 1',
     net: { post: 1.06, centre: 0.895 },
     ends: {
-      A: { runback: 4.72, fenceHeight: 6.0 },
-      B: { runback: 4.69, fenceHeight: 2.7 },
+      A: { runback: 4.72, fenceHeight: 6.0, wallHeight: 2.0 }, // 2 m brick wall, mesh above
+      B: { runback: 4.69, fenceHeight: 2.7, wallHeight: 0 },
     },
   },
 ];
 
-// Swing Stick (1st gen): a fork hooks over the fence's top rail; the pole below it
-// (22–72") is a handle for lifting it up there, and the top section raises the phone
-// up to 24". Camera ends up ~0.8 m above the fork when fully raised (measured from
-// SwingVision's product photo). Backup: clamp the fork to the mesh with the rear knob.
-// Defaults for a 183 cm person: hands ~2.3 m overhead + ~1.1 m of handle = ~3.4 m rail;
-// tightening the rear knob on the mesh needs your hands at the fork, ~2.3 m.
+// Swing Stick (1st gen): a fork hooks over the top rail or into a hole in the mesh.
+// You hold the bottom of the pole overhead and lift the fork into place, so
+//   fork height  = grip height (hands overhead) + handle length below the fork
+//   camera height = fork height + ~0.8 m (top section fully raised; measured from
+//                   SwingVision's product photo)
+// Defaults: a 183 cm person grips ~2.3 m overhead; handle ~1.1 m (72" pole minus
+// the 24" top section, less a hand's width). Both are estimates – measure yours.
 export const DEFAULT_SETTINGS = {
   phone: 'iphone-12',
   mode: 'singles',
+  gripHeight: 2.3,
+  handleLength: 1.1,
   stickAboveClamp: 0.8,
-  maxRailHeight: 3.4,
-  maxClampHeight: 2.3,
   farPlayer: true,
 };

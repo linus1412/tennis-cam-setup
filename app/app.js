@@ -81,14 +81,17 @@ $('#height').addEventListener('input', (e) => {
 $('#offset').addEventListener('input', (e) => { state.offset = parseFloat(e.target.value) || 0; update(); });
 $('#farPlayer').addEventListener('change', (e) => { settings.farPlayer = e.target.checked; saveSettings(); update(); });
 
-// Highest camera height possible at this end: hook over the top rail if the handle
-// can get the fork up there, otherwise clamp to the mesh as high as you can reach.
+// Highest camera height possible at this end: hook the fork over the top rail if you
+// can lift it that high, otherwise into the mesh as high as you can reach.
 function mountFor(end) {
-  if (end.fenceHeight <= settings.maxRailHeight) {
+  const reach = settings.gripHeight + settings.handleLength;
+  if (reach >= end.fenceHeight) {
     return { height: end.fenceHeight + settings.stickAboveClamp, how: `Hook the fork over the ${fmt(end.fenceHeight, 1)} m top rail` };
   }
-  const clamp = Math.min(settings.maxClampHeight, end.fenceHeight);
-  return { height: clamp + settings.stickAboveClamp, how: `Fence too tall to reach the top: clamp the fork to the mesh at ~${fmt(clamp, 1)} m with the rear knob` };
+  if (reach < (end.wallHeight || 0)) {
+    return { height: reach + settings.stickAboveClamp, how: `You can only lift the fork to ${fmt(reach, 1)} m, below the ${fmt(end.wallHeight, 1)} m wall – you'll need something to stand on` };
+  }
+  return { height: reach + settings.stickAboveClamp, how: `Hook the fork into the mesh as high as you can lift it (~${fmt(reach, 1)} m)` };
 }
 
 function update(syncHeightField = true) {
@@ -237,8 +240,10 @@ function loadForm(c) {
   form.netCentre.value = c.net.centre;
   form.aRunback.value = c.ends.A.runback;
   form.aFence.value = c.ends.A.fenceHeight;
+  form.aWall.value = c.ends.A.wallHeight || 0;
   form.bRunback.value = c.ends.B.runback;
   form.bFence.value = c.ends.B.fenceHeight;
+  form.bWall.value = c.ends.B.wallHeight || 0;
   $('#deleteCourt').hidden = !courts.some((x) => x.id === c.id);
 }
 
@@ -247,7 +252,7 @@ $('#newCourt').addEventListener('click', () => {
   loadForm({
     id: `c-${Date.now().toString(36)}`, club: '', name: '',
     net: { post: 1.07, centre: 0.914 },
-    ends: { A: { runback: 6.4, fenceHeight: 3 }, B: { runback: 6.4, fenceHeight: 3 } },
+    ends: { A: { runback: 6.4, fenceHeight: 3, wallHeight: 0 }, B: { runback: 6.4, fenceHeight: 3, wallHeight: 0 } },
   });
   form.name.focus();
 });
@@ -261,8 +266,8 @@ form.addEventListener('submit', (e) => {
     name: form.name.value.trim(),
     net: { post: num(form.netPost.value), centre: num(form.netCentre.value) },
     ends: {
-      A: { runback: num(form.aRunback.value), fenceHeight: num(form.aFence.value) },
-      B: { runback: num(form.bRunback.value), fenceHeight: num(form.bFence.value) },
+      A: { runback: num(form.aRunback.value), fenceHeight: num(form.aFence.value), wallHeight: num(form.aWall.value) || 0 },
+      B: { runback: num(form.bRunback.value), fenceHeight: num(form.bFence.value), wallHeight: num(form.bWall.value) || 0 },
     },
   };
   const i = courts.findIndex((x) => x.id === c.id);
@@ -285,7 +290,7 @@ $('#deleteCourt').addEventListener('click', () => {
   update();
 });
 
-for (const [id, key] of [['#maxRail', 'maxRailHeight'], ['#maxClamp', 'maxClampHeight'], ['#stickAbove', 'stickAboveClamp']]) {
+for (const [id, key] of [['#gripHeight', 'gripHeight'], ['#handleLength', 'handleLength'], ['#stickAbove', 'stickAboveClamp']]) {
   $(id).addEventListener('input', (e) => {
     const v = parseFloat(e.target.value);
     if (!(v >= 0)) return;
@@ -327,8 +332,8 @@ function escapeHtml(s) {
 fillCourtSelects();
 $('#phone').value = settings.phone;
 $('#farPlayer').checked = settings.farPlayer;
-$('#maxRail').value = settings.maxRailHeight;
-$('#maxClamp').value = settings.maxClampHeight;
+$('#gripHeight').value = settings.gripHeight;
+$('#handleLength').value = settings.handleLength;
 $('#stickAbove').value = settings.stickAboveClamp;
 loadForm(currentCourt());
 update();

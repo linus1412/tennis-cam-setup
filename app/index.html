@@ -104,9 +104,11 @@
           <h3>End A</h3>
           <label class="field"><span>Baseline → fence (m)</span><input name="aRunback" type="number" step="0.01" inputmode="decimal"></label>
           <label class="field"><span>Fence height (m)</span><input name="aFence" type="number" step="0.05" inputmode="decimal"></label>
+          <label class="field"><span>Solid wall at base (m)</span><input name="aWall" type="number" step="0.05" inputmode="decimal"></label>
           <h3>End B</h3>
           <label class="field"><span>Baseline → fence (m)</span><input name="bRunback" type="number" step="0.01" inputmode="decimal"></label>
           <label class="field"><span>Fence height (m)</span><input name="bFence" type="number" step="0.05" inputmode="decimal"></label>
+          <label class="field"><span>Solid wall at base (m)</span><input name="bWall" type="number" step="0.05" inputmode="decimal"></label>
           <div class="row">
             <button class="primary" type="submit">Save</button>
             <button type="button" id="deleteCourt" class="danger">Delete</button>
@@ -115,10 +117,10 @@
       </div>
       <div class="card">
         <h3>Equipment</h3>
-        <label class="field"><span>Highest top rail you can lift the fork onto (m)</span>
-          <input id="maxRail" type="number" step="0.05" inputmode="decimal"></label>
-        <label class="field"><span>Highest you can clamp to the mesh, for taller fences (m)</span>
-          <input id="maxClamp" type="number" step="0.05" inputmode="decimal"></label>
+        <label class="field"><span>Height of your hands holding the pole base overhead (m)</span>
+          <input id="gripHeight" type="number" step="0.05" inputmode="decimal"></label>
+        <label class="field"><span>Pole length from base to fork, fully extended (m)</span>
+          <input id="handleLength" type="number" step="0.05" inputmode="decimal"></label>
         <label class="field"><span>Camera height above the fork, top section raised (m)</span>
           <input id="stickAbove" type="number" step="0.05" inputmode="decimal"></label>
       </div>
