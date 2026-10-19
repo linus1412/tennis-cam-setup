@@ -107,6 +107,8 @@ function update(syncHeightField = true) {
   if (syncHeightField) $('#height').value = fmt(height);
   const r = recommend({ ...base, maxHeight: height });
   state.target = r.chosen.pitch;
+  $('#targetInput').value = fmt(state.target, 0);
+  renderTarget();
   renderResult(r, { end, recHeight, mount });
   renderSide(r, court);
 }
@@ -199,10 +201,17 @@ $('#enableSensors').addEventListener('click', async () => {
       : 'Motion access was refused. In Settings › Safari, allow Motion & Orientation Access, then reload.';
     return;
   }
-  $('#enableSensors').hidden = true;
-  $('#gauge').hidden = false;
+  $('#gaugeOverlay').hidden = false;
+  keepAwake();
   if (unwatch) unwatch();
   unwatch = watchTilt(renderTilt);
+});
+
+$('#closeGauge').addEventListener('click', () => {
+  if (unwatch) unwatch();
+  unwatch = null;
+  $('#gaugeOverlay').hidden = true;
+  releaseAwake();
 });
 
 $('#targetInput').addEventListener('input', renderTarget);
@@ -212,21 +221,51 @@ function renderTarget() {
   $('#targetVal').textContent = Number.isFinite(t) ? `${fmt(t, 1)}°` : '–';
 }
 
-function renderTilt({ camDown, roll }) {
+// Which way the phone is held: +1 = right edge up, -1 = left edge up, 0 = upright portrait.
+let held = 1;
+function updateHeld(sideUp) {
+  if (Math.abs(sideUp) > 0.6) held = Math.sign(sideUp);
+  else if (Math.abs(sideUp) < 0.4) held = 0;
+  const rot = $('#rot');
+  // If the page hasn't rotated itself (rotation lock on), turn the gauge ourselves.
+  const pagePortrait = window.innerHeight > window.innerWidth;
+  const turn = held !== 0 && pagePortrait;
+  rot.classList.toggle('turn', turn);
+  rot.classList.toggle('upright', held === 0);
+  rot.style.setProperty('--turn', `${held > 0 ? 90 : -90}deg`);
+}
+
+function renderTilt({ camDown, roll, sideUp }) {
+  updateHeld(sideUp);
   const t = parseFloat($('#targetInput').value);
   $('#tiltVal').textContent = `${fmt(camDown, 1)}°`;
-  const card = document.querySelector('.level');
+  const overlay = $('#gaugeOverlay');
   if (Number.isFinite(t)) {
     const d = camDown - t;
     const good = Math.abs(d) <= 1;
-    card.classList.toggle('good', good);
-    card.classList.toggle('off', !good);
-    $('#deltaVal').textContent = good ? 'On target' : d > 0 ? `Tilt up ${fmt(Math.abs(d), 1)}°` : `Tilt down ${fmt(Math.abs(d), 1)}°`;
+    overlay.classList.toggle('good', good);
+    overlay.classList.toggle('off', !good);
+    $('#deltaVal').textContent = good ? 'On target' : d > 0 ? `Aim up ${fmt(Math.abs(d), 1)}°` : `Aim down ${fmt(Math.abs(d), 1)}°`;
   }
-  const clamped = Math.max(-10, Math.min(10, roll));
+  // The bubble floats to the high end of the phone's long edge, as seen from behind the screen.
+  const side = held === 0 ? 1 : -held;
+  const clamped = Math.max(-10, Math.min(10, roll)) * side;
   $('#bubble').style.left = `calc(${50 + clamped * 5}% - 9px)`;
   $('#rollVal').textContent = Math.abs(roll) < 1 ? 'Horizon level' : `Horizon ${fmt(Math.abs(roll), 1)}° off level`;
 }
+
+// Keep the screen on while the gauge is up (iOS 16.4+).
+let wakeLock = null;
+async function keepAwake() {
+  try { wakeLock = await navigator.wakeLock?.request('screen'); } catch { /* not supported */ }
+}
+function releaseAwake() {
+  wakeLock?.release().catch(() => {});
+  wakeLock = null;
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && !$('#gaugeOverlay').hidden) keepAwake();
+});
 
 // ---------- courts tab ----------
 const form = $('#courtForm');

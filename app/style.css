@@ -96,13 +96,23 @@ svg { width: 100%; height: auto; display: block; }
 
 .level { text-align: center; }
 .level .primary { width: 100%; }
-.big { font-size: 88px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.04em; line-height: 1; margin: 6px 0; }
-.target { color: var(--muted); }
-.target b { color: var(--ink); }
-.delta { font-size: 20px; font-weight: 600; min-height: 28px; }
-.level.good .big, .level.good .delta { color: var(--ok); }
-.level.off .delta { color: var(--warn); }
-.roll { position: relative; height: 28px; margin: 18px auto 4px; max-width: 260px; border-radius: 14px; border: 2px solid var(--line); background: var(--bg); }
+
+/* Full-screen gauge, laid out for a phone held in landscape. */
+.overlay { position: fixed; inset: 0; z-index: 10; background: var(--bg); color: var(--ink); overflow: hidden; transition: background .15s; }
+.overlay.good { background: #1f7a4a; color: #fff; --muted: #d6f5e3; --line: rgba(255,255,255,.4); }
+.overlay.off { background: #3a2414; color: #fff; --muted: #f3cdb4; --line: rgba(255,255,255,.3); }
+.rot { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-around; gap: 4vmin; padding: 4vmin; text-align: center; }
+.rot.turn { inset: auto; top: 50%; left: 50%; width: 100vh; height: 100vw; transform: translate(-50%, -50%) rotate(var(--turn)); }
+.rot.upright { flex-direction: column; justify-content: center; }
+.g-label { font-size: 4vmin; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.big { font-size: 32vmin; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.04em; line-height: 1; margin: 1vmin 0; }
+.delta { font-size: 7vmin; font-weight: 700; min-height: 8vmin; }
+.target { font-size: 6vmin; color: var(--muted); }
+.target b { color: inherit; }
+.overlay .target b { color: #fff; }
+.g-side { display: flex; flex-direction: column; align-items: center; gap: 2vmin; min-width: 40%; }
+.g-side button { margin-top: 2vmin; padding: 12px 28px; font-size: 18px; background: transparent; color: inherit; border-color: var(--line); }
+.roll { position: relative; height: 28px; width: 100%; max-width: 260px; margin: 2vmin auto 0; border-radius: 14px; border: 2px solid var(--line); background: rgba(0,0,0,.15); }
 .roll::after { content: ""; position: absolute; left: 50%; top: 2px; bottom: 2px; width: 2px; background: var(--muted); transform: translateX(-1px); }
 .bubble { position: absolute; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--ball); left: calc(50% - 9px); transition: left .08s linear; }
-.rollVal { font-size: 13px; color: var(--muted); }
+.rollVal { font-size: 4vmin; color: var(--muted); }

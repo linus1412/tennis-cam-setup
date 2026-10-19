@@ -31,4 +31,7 @@ test('tilt sensor maths', () => {
   assert.ok(Math.abs(tiltFromOrientation(0, 0).camDown - 90) < 1e-9); // flat, screen up
   assert.ok(Math.abs(tiltFromOrientation(90, 0).camDown) < 1e-9); // upright portrait
   assert.ok(Math.abs(tiltFromOrientation(0, 60).camDown - 30) < 1e-9); // landscape, 30° down
+  assert.ok(tiltFromOrientation(0, -60).sideUp > 0.8); // landscape, right edge up
+  assert.ok(tiltFromOrientation(0, 60).sideUp < -0.8); // landscape, left edge up
+  assert.ok(Math.abs(tiltFromOrientation(80, 0).sideUp) < 1e-9); // portrait
 });

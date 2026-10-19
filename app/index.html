@@ -72,21 +72,30 @@
     <!-- LEVEL -->
     <section id="tab-level" class="tab" hidden>
       <div class="card level">
-        <p class="hint" id="levelHint">Put the phone in the holder, rear camera facing the court, in landscape. Hold the stick upright.</p>
-        <button class="primary" id="enableSensors">Start tilt sensor</button>
-        <div id="gauge" hidden>
-          <div class="target">Target <b id="targetVal">–</b> down</div>
-          <div class="big" id="tiltVal">–</div>
-          <div class="delta" id="deltaVal"></div>
-          <div class="roll"><div class="bubble" id="bubble"></div></div>
-          <div class="rollVal" id="rollVal"></div>
-          <label class="field inline">
-            <span>Target (°)</span>
-            <input id="targetInput" type="number" step="0.5" inputmode="decimal">
-          </label>
-        </div>
+        <p class="hint" id="levelHint">Put the phone in the holder sideways (landscape), rear camera facing the court, and hold the stick upright. The gauge turns to read the right way up even with rotation lock on.</p>
+        <label class="field inline">
+          <span>Target tilt down (°)</span>
+          <input id="targetInput" type="number" step="0.5" inputmode="decimal">
+        </label>
+        <button class="primary" id="enableSensors">Start tilt gauge</button>
       </div>
     </section>
+
+    <div id="gaugeOverlay" class="overlay" hidden>
+      <div class="rot" id="rot">
+        <div class="g-main">
+          <div class="g-label">Camera tilt down</div>
+          <div class="big" id="tiltVal">–</div>
+          <div class="delta" id="deltaVal"></div>
+        </div>
+        <div class="g-side">
+          <div class="target">Target <b id="targetVal">–</b></div>
+          <div class="roll"><div class="bubble" id="bubble"></div></div>
+          <div class="rollVal" id="rollVal"></div>
+          <button id="closeGauge">Done</button>
+        </div>
+      </div>
+    </div>
 
     <!-- COURTS -->
     <section id="tab-courts" class="tab" hidden>
