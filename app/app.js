@@ -148,6 +148,7 @@ function update(syncHeightField = true) {
   lastSetup = {
     court, endKey: state.end, mode: settings.mode, r, offset: state.offset,
     handleLength: settings.handleLength, stickAboveClamp: settings.stickAboveClamp,
+    player: { playerHeight: settings.playerHeight, racketLength: settings.racketLength, jump: settings.jump, tossAbove: settings.tossAbove },
   };
   if (view3d && !$('#tab-3d').hidden) view3d.update(lastSetup);
 }

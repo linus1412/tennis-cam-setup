@@ -1,5 +1,5 @@
 // App shell cache so the app works courtside without signal.
-const CACHE = 'court-cam-v11';
+const CACHE = 'court-cam-v12';
 const FILES = ['./', 'index.html', 'style.css', 'app.js', 'geometry.js', 'data.js', 'sensor.js',
   'view3d.js', 'vendor/three.module.min.js', 'vendor/OrbitControls.js',
   'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-512.png'];

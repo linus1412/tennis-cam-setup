@@ -1,7 +1,7 @@
 // 3D view of the court, fences and phone. Loaded on demand when the 3D tab opens.
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
-import { COURT, cameraBasis, project, netHeightAt } from './geometry.js';
+import { COURT, cameraBasis, project, netHeightAt, SERVE_SPOTS } from './geometry.js';
 
 // App coordinates: x right, y down the court from the camera-end baseline, z up.
 // three.js: y up, so map (x, y, z) -> (x, z, -y).
@@ -15,6 +15,11 @@ const COLORS = {
   lineOut: 0xe0402a, // court line outside the phone's frame
   cone: 0xff8a1f,
   shadow: 0x4b2470,
+  skin: 0xd9a27a,
+  shirt: 0xf4f4f0,
+  shorts: 0x1d2a44,
+  racket: 0x222831,
+  ball: 0xd8f03a,
   net: 0x1b1f1d,
   post: 0x2c3a33,
   wall: 0x9a5a43,
@@ -30,7 +35,7 @@ let renderer, scene, cam, controls, root, container, hud, setup, frame = null;
 // What the phone sees: same position and tilt as the phone, its zoom's field of view, 16:9.
 let phoneCam, mode = 'orbit', phoneHud;
 // On/off switches under the view, remembered per device.
-const show = { split: true, cone: true, shadow: true };
+const show = { split: true, cone: true, shadow: true, players: true };
 try { Object.assign(show, JSON.parse(localStorage.getItem('view3d') || '{}')); } catch { /* defaults */ }
 const VIDEO_ASPECT = 16 / 9;
 
@@ -91,6 +96,7 @@ export function update(s) {
   buildRig(root, s);
   if (show.cone) buildCone(root, s);
   if (show.shadow) buildNetShadow(root, s);
+  if (show.players) buildPlayers(root, s);
   scene.add(root);
   placePhoneCam(s);
   renderHud();
@@ -311,16 +317,16 @@ function buildCone(g, s) {
   const pts = [];
   for (let i = 0; i < 4; i++) pts.push(apex, V(...ends[i]), V(...ends[(i + 1) % 4]));
   const sides = new THREE.Mesh(new THREE.BufferGeometry().setFromPoints(pts),
-    new THREE.MeshBasicMaterial({ color: COLORS.cone, transparent: true, opacity: 0.08, side: THREE.DoubleSide, depthWrite: false }));
+    new THREE.MeshBasicMaterial({ color: COLORS.cone, transparent: true, opacity: 0.11, side: THREE.DoubleSide, depthWrite: false }));
   // WebGL lines are always 1px, so draw edges as thin tubes: four rays plus the rim.
   const edges = new THREE.Group();
   const edgeMat = new THREE.MeshBasicMaterial({ color: COLORS.cone });
   for (let i = 0; i < 4; i++) {
     // Taper from fine at the phone to thick far away, so edges read at overview distances.
-    edges.add(tube(apex, V(...ends[i]), 0.01, edgeMat, 0.06));
-    edges.add(tube(V(...ends[i]), V(...ends[(i + 1) % 4]), 0.05, edgeMat));
+    edges.add(tube(apex, V(...ends[i]), 0.014, edgeMat, 0.08));
+    edges.add(tube(V(...ends[i]), V(...ends[(i + 1) % 4]), 0.065, edgeMat));
   }
-  const marker = new THREE.Mesh(new THREE.SphereGeometry(0.2, 20, 12), edgeMat);
+  const marker = new THREE.Mesh(new THREE.SphereGeometry(0.24, 20, 12), edgeMat);
   marker.position.copy(apex);
   edges.add(marker);
 
@@ -339,14 +345,14 @@ function buildCone(g, s) {
   if (poly.length >= 3) {
     const shape = new THREE.Shape(poly.map(([x, y]) => new THREE.Vector2(x, y)));
     const fill = new THREE.Mesh(new THREE.ShapeGeometry(shape),
-      new THREE.MeshBasicMaterial({ color: COLORS.cone, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide }));
+      new THREE.MeshBasicMaterial({ color: COLORS.cone, transparent: true, opacity: 0.2, depthWrite: false, side: THREE.DoubleSide }));
     // Shape is drawn in the x/y plane; lay it flat on the ground (app y -> three −z).
     fill.rotation.x = -Math.PI / 2;
     fill.position.y = 0.025;
     footprint.add(fill);
     for (let i = 0; i < poly.length; i++) {
       const [a, b] = [poly[i], poly[(i + 1) % poly.length]];
-      footprint.add(tube(V(a[0], a[1], 0.05), V(b[0], b[1], 0.05), 0.045, edgeMat));
+      footprint.add(tube(V(a[0], a[1], 0.05), V(b[0], b[1], 0.05), 0.06, edgeMat));
     }
   }
 
@@ -386,11 +392,85 @@ function buildNetShadow(g, s) {
   const poly = [[-px, yNet], [px, yNet], ...edge.reverse()];
   const shape = new THREE.Shape(poly.map(([x, y]) => new THREE.Vector2(x, y)));
   const mesh = new THREE.Mesh(new THREE.ShapeGeometry(shape),
-    new THREE.MeshBasicMaterial({ color: COLORS.shadow, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide }));
+    new THREE.MeshBasicMaterial({ color: COLORS.shadow, transparent: true, opacity: 0.32, depthWrite: false, side: THREE.DoubleSide }));
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.y = 0.03;
   mesh.layers.set(OVERLAY);
   g.add(mesh);
+}
+
+// ---------- players ----------
+
+// A server at each end, deuce side, caught at contact: the ball on the strings at the
+// contact height from the Serve check (same body model as serveHeights), plus a ghost ball at the toss peak. The balls are
+// drawn on the normal layer so the phone view shows whether they are in frame.
+function buildPlayers(g, s) {
+  const L = COURT.length;
+  // Near server faces up the court (+y); their right hand, and the deuce court, is +x.
+  addServer(g, s, { fwd: 1, contact: [SERVE_SPOTS.side, SERVE_SPOTS.inside] });
+  addServer(g, s, { fwd: -1, contact: [-SERVE_SPOTS.side, L - SERVE_SPOTS.inside] });
+}
+
+function addServer(g, s, { fwd, contact }) {
+  const { playerHeight: H, racketLength: R, jump = 0, tossAbove } = s.player;
+  const mat = (color) => new THREE.MeshLambertMaterial({ color });
+  const skin = mat(COLORS.skin), shirt = mat(COLORS.shirt), shorts = mat(COLORS.shorts), racketMat = mat(COLORS.racket);
+  // Build the pose with the feet at the origin, x = the player's right, y = towards the net.
+  const lean = THREE.MathUtils.degToRad(10);
+  const up = [0, Math.sin(lean), Math.cos(lean)]; // arm + racket, tipped slightly forwards
+  const hip = [0, 0.05, 0.53 * H + jump];
+  const neck = [0, 0.12, 0.82 * H + jump];
+  const head = [0, 0.14, 0.93 * H + jump];
+  const shoulderR = add3(neck, [0.19, 0, 0]), shoulderL = add3(neck, [-0.19, 0, 0]);
+  const handZ = 1.33 * H - 0.11 + jump;
+  const hand = add3(shoulderR, up, (handZ - shoulderR[2]) / up[2]);
+  const strings = add3(hand, up, R - 0.07 - 0.17);
+  const butt = add3(hand, up, -0.07), throat = add3(strings, up, -0.17);
+  const tossHand = add3(shoulderL, [-0.05, 0.3, 0.42]);
+  // Place it so the strings land on the contact spot, turned to face the net.
+  const at = ([x, y, z]) => V(contact[0] + fwd * (x - strings[0]), contact[1] + fwd * (y - strings[1]), z);
+
+  const fig = new THREE.Group();
+  for (const sx of [-1, 1]) fig.add(limb(at([sx * 0.11, 0, jump + 0.06]), at(add3(hip, [sx * 0.1, 0, 0])), 0.065, shorts));
+  fig.add(limb(at(hip), at(neck), 0.15, shirt));
+  fig.add(limb(at(shoulderL), at(shoulderR), 0.06, shirt));
+  fig.add(limb(at(shoulderR), at(hand), 0.04, skin));
+  fig.add(limb(at(shoulderL), at(tossHand), 0.04, skin));
+  const h = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), skin);
+  h.position.copy(at(head));
+  fig.add(h);
+  // Racket: handle and throat, then an oval head facing the net with the ball on the strings.
+  fig.add(limb(at(butt), at(throat), 0.016, racketMat));
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.012, 8, 24), racketMat);
+  rim.scale.set(0.78, 1, 1); // 26 cm wide, 33 cm long
+  rim.position.copy(at(strings));
+  rim.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), at(add3(strings, up)).sub(at(strings)).normalize());
+  fig.add(rim);
+  g.add(fig);
+
+  // Balls are drawn ~1.5× real size (r 5 cm) so they still show from the far end.
+  const ballMat = new THREE.MeshLambertMaterial({ color: COLORS.ball });
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(0.05, 16, 12), ballMat);
+  ball.position.copy(at(add3(strings, [0, 0.06, 0])));
+  g.add(ball);
+  const peakPos = ball.position.clone().add(new THREE.Vector3(0, tossAbove, 0));
+  const peak = new THREE.Mesh(new THREE.SphereGeometry(0.05, 16, 12),
+    new THREE.MeshLambertMaterial({ color: COLORS.ball, transparent: true, opacity: 0.55 }));
+  peak.position.copy(peakPos);
+  g.add(peak);
+  // Toss path guide (3D view only).
+  const guide = tube(ball.position, peakPos, 0.012, new THREE.MeshBasicMaterial({ color: COLORS.ball }));
+  guide.layers.set(OVERLAY);
+  g.add(guide);
+}
+
+// A rounded limb from a to b (three.js vectors).
+function limb(a, b, r, material) {
+  const dir = b.clone().sub(a);
+  const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, Math.max(dir.length() - 2 * r, 0.001), 4, 10), material);
+  m.position.copy(a).addScaledVector(dir, 0.5);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+  return m;
 }
 
 // A thin cylinder from a to b (three.js vectors), radius rA at a and rB at b.
