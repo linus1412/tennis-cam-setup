@@ -1,6 +1,7 @@
 // App shell cache so the app works courtside without signal.
-const CACHE = 'court-cam-v3';
+const CACHE = 'court-cam-v4';
 const FILES = ['./', 'index.html', 'style.css', 'app.js', 'geometry.js', 'data.js', 'sensor.js',
+  'view3d.js', 'vendor/three.module.min.js', 'vendor/OrbitControls.js',
   'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-512.png'];
 
 self.addEventListener('install', (e) => {

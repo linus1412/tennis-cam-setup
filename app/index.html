@@ -13,6 +13,7 @@
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon-180.png">
   <link rel="stylesheet" href="style.css">
+  <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 </head>
 <body>
   <header class="top">
@@ -20,6 +21,7 @@
     <nav class="tabs" role="tablist">
       <button role="tab" data-tab="setup" aria-selected="true">Setup</button>
       <button role="tab" data-tab="level">Level</button>
+      <button role="tab" data-tab="3d">3D</button>
       <button role="tab" data-tab="courts">Courts</button>
     </nav>
   </header>
@@ -111,6 +113,18 @@
         </div>
       </div>
     </div>
+
+    <!-- 3D -->
+    <section id="tab-3d" class="tab" hidden>
+      <div class="scene" id="scene">
+        <div class="scene-canvas"></div>
+        <div class="scene-hud"></div>
+        <div class="seg scene-views">
+          <button data-view="iso">3D</button><button data-view="top">Top</button><button data-view="side">Side</button><button data-view="stick">Stick</button>
+        </div>
+      </div>
+      <p class="hint">Drag to orbit, pinch to zoom, two fingers to pan. Change the setup on the Setup tab.</p>
+    </section>
 
     <!-- COURTS -->
     <section id="tab-courts" class="tab" hidden>

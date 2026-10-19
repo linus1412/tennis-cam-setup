@@ -44,6 +44,15 @@ function showTab(name) {
   document.querySelectorAll('.tabs button').forEach((b) =>
     b.setAttribute('aria-selected', String(b.dataset.tab === name)));
   document.querySelectorAll('.tab').forEach((t) => { t.hidden = t.id !== `tab-${name}`; });
+  if (name === '3d') open3d();
+}
+
+// The 3D view (three.js) only loads when its tab is first opened.
+let view3d = null, lastSetup = null;
+async function open3d() {
+  if (view3d) return view3d.update(lastSetup);
+  view3d = await import('./view3d.js');
+  view3d.mount($('#scene'), lastSetup);
 }
 
 // ---------- setup tab ----------
@@ -126,6 +135,11 @@ function update(syncHeightField = true) {
   renderResult(r, { end, recHeight, mount });
   renderSide(r, court);
   renderServe(r, base);
+  lastSetup = {
+    court, endKey: state.end, mode: settings.mode, r, offset: state.offset,
+    handleLength: settings.handleLength, stickAboveClamp: settings.stickAboveClamp,
+  };
+  if (view3d && !$('#tab-3d').hidden) view3d.update(lastSetup);
 }
 
 // Swap in a zoom/tilt picked from the serve table, if it still keeps the court in frame.
