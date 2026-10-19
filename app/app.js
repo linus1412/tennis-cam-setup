@@ -1,4 +1,4 @@
-import { COURT, recommend, serveHeights, serveOptions } from './geometry.js';
+import { COURT, recommend, serveHeights, serveOptions, topOfFrameAt, SERVE_SPOTS } from './geometry.js';
 import { PHONES, phoneLenses, DEFAULT_COURTS, DEFAULT_SETTINGS, STICK } from './data.js';
 import { requestSensorPermission, watchTilt } from './sensor.js';
 
@@ -280,8 +280,48 @@ function renderSide(r, court) {
     <text x="${X(0)}" y="${H - 3}" font-size="9" fill="var(--muted)" text-anchor="middle">baseline</text>
     <text x="${X(COURT.halfLength)}" y="${H - 3}" font-size="9" fill="var(--muted)" text-anchor="middle">net</text>
     <text x="${X(COURT.length) + 2}" y="${H - 3}" font-size="9" fill="var(--muted)" text-anchor="middle">far baseline</text>
-    <text x="${W - 2}" y="12" font-size="8" fill="var(--muted)" text-anchor="end">heights ×${vex} · dashed = sight line to far service line</text>
-    <text x="${camX + 7}" y="${camZ - 6}" font-size="10" fill="var(--ink)">${fmt(r.height)} m · ${fmt(lens.pitch, 0)}°</text>`;
+    <text x="${W - 2}" y="12" font-size="8" fill="var(--muted)" text-anchor="end">heights ×${vex} · dashed = sight line to far service line · tick = frame top over server</text>
+    <text x="${camX + 7}" y="${camZ - 6}" font-size="10" fill="var(--ink)">${fmt(r.height)} m · ${fmt(lens.pitch, 0)}°</text>
+    ${sideServers(r, { X, Z, s, vex, ground })}`;
+}
+
+// A server at each end at the moment of contact, with the toss peak above, coloured by
+// whether the top of the frame reaches them (worse of the deuce and ad sides).
+function sideServers(r, { X, Z, s, vex, ground }) {
+  const lens = r.chosen;
+  const sh = serveHeights(settings);
+  const H = settings.playerHeight, jump = settings.jump;
+  const frame = { height: r.height, distBehind: r.distBehind, offsetX: state.offset, pitch: lens.pitch, yaw: lens.yaw, fov: lens.fov };
+  const lean = Math.tan((10 * Math.PI) / 180);
+  return [[SERVE_SPOTS.inside, 1, 'start'], [COURT.length - SERVE_SPOTS.inside, -1, 'end']].map(([y, fwd, anchor]) => {
+    const top = Math.min(...[-1, 1].map((sx) => topOfFrameAt(sx * SERVE_SPOTS.side, y, frame)));
+    // Body in metres (horizontal offset along the court, height), drawn in profile.
+    const P = (dy, z) => [X(y + dy * fwd), Z(z)];
+    const hip = P(0, 0.53 * H + jump), shoulder = P(0.02, 0.82 * H + jump), neck = P(0.02, 0.86 * H + jump);
+    const handZ = 1.33 * H - 0.11 + jump;
+    const hand = P(0.02 + (handZ - 0.82 * H - jump) * lean, handZ);
+    const contact = P(0.02 + (sh.contact - 0.82 * H - jump) * lean, sh.contact);
+    const toss = P(0.02 + (sh.contact - 0.82 * H - jump) * lean, sh.toss);
+    const headR = 0.11 * s * vex;
+    const head = P(0.02, 0.93 * H + jump);
+    const line = (a, b, w = 1.6, c = 'var(--ink)') => `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${c}" stroke-width="${w}" stroke-linecap="round"/>`;
+    const feetZ = Z(jump);
+    const seesContact = top >= sh.contact, seesToss = top >= sh.toss;
+    const col = (ok) => (ok ? 'var(--ok)' : 'var(--warn)');
+    const tx = toss[0] + 6 * fwd;
+    return `<g>
+      ${line([X(y - 0.12 * fwd), feetZ], hip)}${line([X(y + 0.12 * fwd), feetZ], hip)}
+      ${line(hip, shoulder)}${line(shoulder, hand)}${line(shoulder, P(0.18, 0.62 * H + jump))}
+      ${line(hand, contact, 2.2, 'var(--court)')}
+      <circle cx="${head[0]}" cy="${head[1]}" r="${headR}" fill="var(--ink)"/>
+      <circle cx="${contact[0]}" cy="${contact[1]}" r="2.6" fill="${col(seesContact)}"/>
+      <circle cx="${toss[0]}" cy="${toss[1]}" r="2.6" fill="${seesToss ? col(true) : 'none'}" stroke="${col(seesToss)}" stroke-width="1" ${seesToss ? '' : 'stroke-dasharray="2 1.5"'}/>
+      <line x1="${toss[0]}" y1="${toss[1] + 3}" x2="${contact[0]}" y2="${contact[1] - 3}" stroke="var(--muted)" stroke-width="0.6" stroke-dasharray="1.5 1.5"/>
+      <text x="${tx}" y="${toss[1] + 3}" font-size="8" fill="${col(seesToss)}" text-anchor="${anchor}">toss ${fmt(sh.toss)}</text>
+      <text x="${tx}" y="${contact[1] + 3}" font-size="8" fill="${col(seesContact)}" text-anchor="${anchor}">contact ${fmt(sh.contact)}</text>
+      ${line([X(y) - 9, Z(Math.min(top, 20))], [X(y) + 9, Z(Math.min(top, 20))], 1, 'var(--muted)')}
+    </g>`;
+  }).join('');
 }
 
 // ---------- level tab ----------
