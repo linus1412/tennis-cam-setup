@@ -1,7 +1,7 @@
 // 3D view of the court, fences and phone. Loaded on demand when the 3D tab opens.
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
-import { COURT } from './geometry.js';
+import { COURT, cameraBasis, project } from './geometry.js';
 
 // App coordinates: x right, y down the court from the camera-end baseline, z up.
 // three.js: y up, so map (x, y, z) -> (x, z, -y).
@@ -12,6 +12,8 @@ const COLORS = {
   surround: 0x2f6b4f,
   court: 0x3d7fb0,
   line: 0xffffff,
+  lineOut: 0xe0402a, // court line outside the phone's frame
+  cone: 0xf2c94c,
   net: 0x1b1f1d,
   post: 0x2c3a33,
   wall: 0x9a5a43,
@@ -51,6 +53,7 @@ export function mount(el, s) {
   scene.add(sun);
 
   cam = new THREE.PerspectiveCamera(45, 1, 0.05, 300);
+  cam.layers.enable(OVERLAY); // the phone camera only sees layer 0, so no cone in its view
   phoneCam = new THREE.PerspectiveCamera(40, VIDEO_ASPECT, 0.1, 300);
   controls = new OrbitControls(cam, renderer.domElement);
   controls.enableDamping = true;
@@ -77,6 +80,7 @@ export function update(s) {
   buildNet(root, s.court.net);
   buildFences(root, s);
   buildRig(root, s);
+  buildCone(root, s);
   scene.add(root);
   placePhoneCam(s);
   renderHud();
@@ -126,7 +130,25 @@ function buildCourt(g, s) {
   line(-0.025, 0.025, svcNear, svcFar);
   line(-0.025, 0.025, 0, 0.1); // centre marks
   line(-0.025, 0.025, L - 0.1, L);
-  for (const [x0, x1, y0, y1] of lines) g.add(flatBox(x0, x1, y0, y1, 0.002, COLORS.line));
+  // Split each line into runs inside / outside the phone's frame; outside runs are red.
+  const inFrame = frameTest(s);
+  for (const [x0, x1, y0, y1] of lines) {
+    const alongX = x1 - x0 > y1 - y0;
+    const len = alongX ? x1 - x0 : y1 - y0;
+    const n = Math.max(1, Math.ceil(len / 0.05));
+    const at = (t) => alongX ? [x0 + (x1 - x0) * t, (y0 + y1) / 2] : [(x0 + x1) / 2, y0 + (y1 - y0) * t];
+    let start = 0, inside = inFrame(...at(0));
+    for (let i = 1; i <= n; i++) {
+      const now = i === n ? !inside : inFrame(...at(i / n));
+      if (now === inside) continue;
+      const t0 = start, t1 = i / n;
+      const color = inside ? COLORS.line : COLORS.lineOut;
+      g.add(alongX ? flatBox(x0 + (x1 - x0) * t0, x0 + (x1 - x0) * t1, y0, y1, 0.002, color)
+                   : flatBox(x0, x1, y0 + (y1 - y0) * t0, y0 + (y1 - y0) * t1, 0.002, color));
+      start = i / n;
+      inside = now;
+    }
+  }
 }
 
 function buildNet(g, net) {
@@ -231,6 +253,104 @@ function buildRig(g, s) {
   const pitch = THREE.MathUtils.degToRad(r.chosen.pitch), yaw = THREE.MathUtils.degToRad(r.chosen.yaw || 0);
   phone.rotation.set(-pitch, -yaw, 0, 'YXZ');
   g.add(phone);
+}
+
+// ---------- viewing cone ----------
+
+const OVERLAY = 1; // three.js layer for things only the orbit view shows
+
+function phoneFrame(s) {
+  const { r, offset = 0 } = s;
+  const fov = r.chosen.fov;
+  return {
+    cam: [offset, -r.distBehind + 0.06, r.height],
+    basis: cameraBasis(r.chosen.pitch, r.chosen.yaw || 0),
+    tanH: Math.tan(THREE.MathUtils.degToRad(fov.h / 2)),
+    tanV: Math.tan(THREE.MathUtils.degToRad(fov.v / 2)),
+    fov,
+  };
+}
+
+// Is a ground point inside the phone's frame?
+function frameTest(s) {
+  const f = phoneFrame(s);
+  return (x, y) => {
+    const q = project([x, y, 0], f.cam, f.basis, f.fov);
+    return !!q && Math.abs(q.u) <= 1 && Math.abs(q.v) <= 1;
+  };
+}
+
+const add3 = (a, b, k = 1) => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k];
+const dot3 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+
+function buildCone(g, s) {
+  const f = phoneFrame(s);
+  const far = s.court.ends[s.endKey === 'A' ? 'B' : 'A'];
+  const yFar = COURT.length + far.runback;
+  // Corner rays, in frame order: top-left, top-right, bottom-right, bottom-left.
+  const corners = [[-1, 1], [1, 1], [1, -1], [-1, -1]].map(([sx, sy]) =>
+    add3(add3(f.basis.fwd, f.basis.right, sx * f.tanH), f.basis.up, sy * f.tanV));
+  // Each ray stops at the ground, or at the far fence if it never reaches the ground.
+  const ends = corners.map((d) => {
+    const tGround = d[2] < 0 ? -f.cam[2] / d[2] : Infinity;
+    const tFence = (yFar - f.cam[1]) / d[1];
+    return add3(f.cam, d, Math.min(tGround, tFence > 0 ? tFence : Infinity, 60));
+  });
+
+  const apex = V(...f.cam);
+  const pts = [];
+  for (let i = 0; i < 4; i++) pts.push(apex, V(...ends[i]), V(...ends[(i + 1) % 4]));
+  const sides = new THREE.Mesh(new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.MeshBasicMaterial({ color: COLORS.cone, transparent: true, opacity: 0.07, side: THREE.DoubleSide, depthWrite: false }));
+  const edgePts = [];
+  for (let i = 0; i < 4; i++) edgePts.push(apex, V(...ends[i]));
+  const edges = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(edgePts),
+    new THREE.LineBasicMaterial({ color: COLORS.cone }));
+
+  // Ground footprint: the surround clipped to the four sides of the frame.
+  const halfOuter = COURT.doublesHalfWidth + SIDE_RUNOFF;
+  const near = s.court.ends[s.endKey];
+  let poly = [[-halfOuter, -near.runback], [halfOuter, -near.runback], [halfOuter, yFar], [-halfOuter, yFar]];
+  const planes = [
+    add3(f.basis.fwd.map((c) => c * f.tanH), f.basis.right, -1),
+    add3(f.basis.fwd.map((c) => c * f.tanH), f.basis.right, 1),
+    add3(f.basis.fwd.map((c) => c * f.tanV), f.basis.up, -1),
+    add3(f.basis.fwd.map((c) => c * f.tanV), f.basis.up, 1),
+  ];
+  for (const n of planes) poly = clip(poly, ([x, y]) => dot3(n, [x - f.cam[0], y - f.cam[1], -f.cam[2]]));
+  const footprint = new THREE.Group();
+  if (poly.length >= 3) {
+    const shape = new THREE.Shape(poly.map(([x, y]) => new THREE.Vector2(x, y)));
+    const fill = new THREE.Mesh(new THREE.ShapeGeometry(shape),
+      new THREE.MeshBasicMaterial({ color: COLORS.cone, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide }));
+    // Shape is drawn in the x/y plane; lay it flat on the ground (app y -> three −z).
+    fill.rotation.x = -Math.PI / 2;
+    fill.position.y = 0.006;
+    footprint.add(fill);
+    const outline = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(poly.map(([x, y]) => V(x, y, 0.008))),
+      new THREE.LineBasicMaterial({ color: COLORS.cone }));
+    footprint.add(outline);
+  }
+
+  for (const o of [sides, edges, footprint]) {
+    o.traverse((c) => c.layers.set(OVERLAY));
+    g.add(o);
+  }
+}
+
+// Sutherland–Hodgman: keep the part of a 2D polygon where side(p) >= 0.
+function clip(poly, side) {
+  const out = [];
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i], b = poly[(i + 1) % poly.length];
+    const sa = side(a), sb = side(b);
+    if (sa >= 0) out.push(a);
+    if ((sa >= 0) !== (sb >= 0)) {
+      const t = sa / (sa - sb);
+      out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+    }
+  }
+  return out;
 }
 
 // ---------- viewing ----------
