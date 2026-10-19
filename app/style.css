@@ -67,6 +67,7 @@ input[type="number"], input:not([type]), select {
 button { padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); font-weight: 600; }
 button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 button.danger { color: var(--warn); }
+button.link { padding: 0; border: 0; background: none; color: var(--accent); font-weight: 600; text-decoration: underline; }
 
 .seg { display: flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .seg button { flex: 1; border: 0; border-radius: 0; background: var(--bg); }
@@ -79,6 +80,22 @@ button.danger { color: var(--warn); }
 .grid .field:nth-child(1), .grid .field:nth-child(2) { grid-column: 1 / -1; }
 .grid .row { grid-column: 1 / -1; }
 .hint { color: var(--muted); font-size: 14px; margin: 0 0 10px; }
+.hint.small { font-size: 12px; margin-top: 8px; }
+
+.serve summary { font-weight: 600; cursor: pointer; }
+.serve details[open] summary { margin-bottom: 10px; }
+.serve-inputs { margin-top: 0; }
+.serve-inputs .field:nth-child(1), .serve-inputs .field:nth-child(2) { grid-column: auto; }
+.serve-heights { font-size: 14px; margin: 0 0 8px; }
+.serve-table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.serve-table th { text-align: left; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding: 4px; }
+.serve-table td { padding: 8px 4px; border-top: 1px solid var(--line); }
+.serve-table tbody tr { cursor: pointer; }
+.serve-table tr.sel td { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.serve-table .rec { font-size: 11px; color: var(--muted); }
+.vis-toss { color: var(--ok); }
+.vis-contact { color: var(--ink); }
+.vis-cut { color: var(--warn); }
 
 .result .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
 .stat b { display: block; font-size: 28px; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }

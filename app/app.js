@@ -1,4 +1,4 @@
-import { COURT, recommend } from './geometry.js';
+import { COURT, recommend, serveHeights, serveOptions } from './geometry.js';
 import { PHONES, phoneLenses, DEFAULT_COURTS, DEFAULT_SETTINGS } from './data.js';
 import { requestSensorPermission, watchTilt } from './sensor.js';
 
@@ -26,6 +26,7 @@ const state = {
   height: null, // null = use recommended
   offset: 0,
   target: null,
+  choice: null, // { lensId, pitch } picked from the serve table
 };
 
 const saveCourts = () => store.set('courts', courts);
@@ -68,10 +69,10 @@ function bindSeg(el, get, set) {
   paint();
 }
 
-bindSeg($('#end'), () => state.end, (v) => { state.end = v; state.height = null; saveSettings(); });
-bindSeg($('#mode'), () => settings.mode, (v) => { settings.mode = v; state.height = null; saveSettings(); });
+bindSeg($('#end'), () => state.end, (v) => { state.end = v; state.height = null; state.choice = null; saveSettings(); });
+bindSeg($('#mode'), () => settings.mode, (v) => { settings.mode = v; state.height = null; state.choice = null; saveSettings(); });
 
-$('#court').addEventListener('change', (e) => { state.courtId = e.target.value; state.height = null; saveSettings(); update(); });
+$('#court').addEventListener('change', (e) => { state.courtId = e.target.value; state.height = null; state.choice = null; saveSettings(); update(); });
 $('#phone').addEventListener('change', (e) => { settings.phone = e.target.value; saveSettings(); update(); });
 $('#height').addEventListener('input', (e) => {
   const v = parseFloat(e.target.value);
@@ -80,6 +81,18 @@ $('#height').addEventListener('input', (e) => {
 });
 $('#offset').addEventListener('input', (e) => { state.offset = parseFloat(e.target.value) || 0; update(); });
 $('#farPlayer').addEventListener('change', (e) => { settings.farPlayer = e.target.checked; saveSettings(); update(); });
+
+// Serve inputs: height and racket shown in cm, stored in metres.
+const SERVE_FIELDS = [['#playerHeight', 'playerHeight', 100], ['#racketLength', 'racketLength', 100], ['#jump', 'jump', 1], ['#tossAbove', 'tossAbove', 1]];
+for (const [id, key, scale] of SERVE_FIELDS) {
+  $(id).addEventListener('input', (e) => {
+    const v = parseFloat(e.target.value);
+    if (!(v >= 0)) return;
+    settings[key] = v / scale;
+    saveSettings();
+    update(false);
+  });
+}
 
 // Highest camera height possible at this end: hook the fork over the top rail if you
 // can lift it that high, otherwise into the mesh as high as you can reach.
@@ -106,17 +119,62 @@ function update(syncHeightField = true) {
   const height = state.height ?? recHeight;
   if (syncHeightField) $('#height').value = fmt(height);
   const r = recommend({ ...base, maxHeight: height });
+  applyChoice(r);
   state.target = r.chosen.pitch;
   $('#targetInput').value = fmt(state.target, 0);
   renderTarget();
   renderResult(r, { end, recHeight, mount });
   renderSide(r, court);
+  renderServe(r, base);
 }
+
+// Swap in a zoom/tilt picked from the serve table, if it still keeps the court in frame.
+function applyChoice(r) {
+  const c = state.choice;
+  if (!c) return;
+  const lens = r.lenses.find((l) => l.id === c.lensId);
+  if (!lens || !lens.fits || c.pitch < lens.pitchRange[0] || c.pitch > lens.pitchRange[1]) {
+    state.choice = null;
+    return;
+  }
+  r.chosen = { ...lens, pitch: c.pitch, picked: true };
+}
+
+function renderServe(r, base) {
+  const sh = serveHeights(settings);
+  $('#serveHeights').innerHTML = `Contact ≈ <b>${fmt(sh.contact)} m</b> · toss peak ≈ <b>${fmt(sh.toss)} m</b>`;
+  const opts = serveOptions({ ...base, height: r.height, distBehind: r.distBehind });
+  const mark = (top) => top >= sh.toss ? ['vis-toss', '●'] : top >= sh.contact ? ['vis-contact', '◐'] : ['vis-cut', '○'];
+  const cell = (top) => { const [c, m] = mark(top); return `<td class="${c}">${m} ${fmt(top, 1)} m</td>`; };
+  const rows = [];
+  for (const o of opts) {
+    if (!o.fits) continue;
+    for (const t of o.tilts) {
+      const sel = r.chosen.id === o.lens.id && Math.abs(r.chosen.pitch - t.pitch) < 0.05;
+      const rec = !state.choice && sel ? ' <span class="rec">recommended</span>' : '';
+      rows.push(`<tr data-lens="${o.lens.id}" data-pitch="${t.pitch}" class="${sel ? 'sel' : ''}">
+        <td>${o.lens.id}</td><td>${fmt(t.pitch, 0)}°${t.kind === 'aim high' ? ' ↑' : ''}${rec}</td>${cell(t.near)}${cell(t.far)}</tr>`);
+    }
+  }
+  const tooTight = opts.filter((o) => !o.fits).map((o) => o.lens.id);
+  $('#serveTable').innerHTML = `
+    <thead><tr><th>Zoom</th><th>Tilt</th><th>Your end</th><th>Far end</th></tr></thead>
+    <tbody>${rows.join('')}</tbody>
+    ${tooTight.length ? `<tfoot><tr><td colspan="4" class="hint small">${tooTight.join(', ')}: court doesn't fit.</td></tr></tfoot>` : ''}`;
+}
+
+$('#serveTable').addEventListener('click', (e) => {
+  const tr = e.target.closest('tr[data-lens]');
+  if (!tr) return;
+  state.choice = { lensId: tr.dataset.lens, pitch: parseFloat(tr.dataset.pitch) };
+  update(false);
+});
 
 function renderResult(r, { end, recHeight, mount }) {
   const lens = r.chosen;
   const msgs = [];
   if (state.height == null) msgs.push(['info', `${mount.how}, top section fully raised.`]);
+  if (lens.picked) msgs.push(['info', `Using your serve-check pick: ${lens.id} at ${fmt(lens.pitch, 0)}°. <button class="link" id="resetChoice">Back to recommended</button>`]);
   if (r.heightOk) {
     msgs.push(['ok', `Far service line clears the net by ${Math.round(r.clearance * 100)} cm.`]);
   } else if (r.clearance > 0) {
@@ -130,8 +188,8 @@ function renderResult(r, { end, recHeight, mount }) {
   if (!lens.fits) {
     msgs.push(['warn', `Even ${lens.name} can't fit the whole ${settings.mode} court from here.`]);
   } else {
-    msgs.push(['info', `Zoom ${lens.id} is the tightest that keeps all four corners in view from ${fmt(r.distBehind)} m back.`]);
-    if (lens.pitchRange) msgs.push(['info', `Anything from ${fmt(lens.pitchRange[0], 0)}° to ${fmt(lens.pitchRange[1], 0)}° keeps the court in frame; ${fmt(lens.pitch, 0)}° leaves the most room at the edges.`]);
+    if (!lens.picked) msgs.push(['info', `Zoom ${lens.id} is the tightest that keeps all four corners in view from ${fmt(r.distBehind)} m back.`]);
+    if (lens.pitchRange) msgs.push(['info', `Anything from ${fmt(lens.pitchRange[0], 0)}° to ${fmt(lens.pitchRange[1], 0)}° keeps the court in frame${lens.picked ? '' : `; ${fmt(lens.pitch, 0)}° leaves the most room at the edges`}.`]);
   }
 
   $('#result').innerHTML = `
@@ -142,6 +200,7 @@ function renderResult(r, { end, recHeight, mount }) {
     </div>
     <ul class="msgs">${msgs.map(([c, t]) => `<li class="${c}">${t}</li>`).join('')}</ul>
     <div class="actions"><button class="primary" id="goLevel">Set phone to ${fmt(lens.pitch, 0)}° →</button></div>`;
+  $('#resetChoice')?.addEventListener('click', () => { state.choice = null; update(false); });
   $('#goLevel').addEventListener('click', () => {
     $('#targetInput').value = fmt(lens.pitch, 0);
     renderTarget();
@@ -371,6 +430,7 @@ function escapeHtml(s) {
 fillCourtSelects();
 $('#phone').value = settings.phone;
 $('#farPlayer').checked = settings.farPlayer;
+for (const [id, key, scale] of SERVE_FIELDS) $(id).value = +(settings[key] * scale).toFixed(2);
 $('#gripHeight').value = settings.gripHeight;
 $('#handleLength').value = settings.handleLength;
 $('#stickAbove').value = settings.stickAboveClamp;

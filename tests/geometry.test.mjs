@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { lensFov, minHeightForServiceLine, recommend } from '../app/geometry.js';
+import { lensFov, minHeightForServiceLine, recommend, serveHeights, serveOptions } from '../app/geometry.js';
 import { tiltFromOrientation } from '../app/sensor.js';
 
 const net = { post: 1.06, centre: 0.895 };
@@ -34,4 +34,17 @@ test('tilt sensor maths', () => {
   assert.ok(tiltFromOrientation(0, -60).sideUp > 0.8); // landscape, right edge up
   assert.ok(tiltFromOrientation(0, 60).sideUp < -0.8); // landscape, left edge up
   assert.ok(Math.abs(tiltFromOrientation(80, 0).sideUp) < 1e-9); // portrait
+});
+
+test('serve contact height for a 183 cm player', () => {
+  const { contact, toss } = serveHeights({ playerHeight: 1.83, racketLength: 0.686, jump: 0.2, tossAbove: 0.6 });
+  assert.ok(contact > 2.8 && contact < 3.1, String(contact));
+  assert.ok(Math.abs(toss - contact - 0.6) < 1e-9);
+});
+
+test('aiming higher shows more above the far server', () => {
+  const [wide] = serveOptions({ height: 4.2, distBehind: 4.72, mode: 'singles', lenses: [lenses[1]] });
+  const [centred, high] = wide.tilts;
+  assert.ok(high.pitch < centred.pitch);
+  assert.ok(high.far > centred.far);
 });

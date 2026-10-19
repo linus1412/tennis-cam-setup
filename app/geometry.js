@@ -106,24 +106,31 @@ export function project(point, cam, basis, fov) {
   };
 }
 
+// Spare room (fraction of half-frame) at the tightest required point; < 0 = cut off.
+function courtMargin(pitch, { cam, yaw, pts, fov }) {
+  const basis = cameraBasis(pitch, yaw);
+  let margin = Infinity;
+  for (const { p } of pts) {
+    const q = project(p, cam, basis, fov);
+    if (!q) return -Infinity;
+    margin = Math.min(margin, 1 - Math.abs(q.u), 1 - Math.abs(q.v));
+  }
+  return margin;
+}
+
 // For one lens: scan pitch and find the angle that best centres the required points.
-export function solvePitch({ height, distBehind, offsetX = 0, mode, fov, farPlayer = true }) {
+export function solvePitch({ height, distBehind, offsetX = 0, mode, fov, farPlayer = true, minMargin = 0.03 }) {
   const cam = [offsetX, -distBehind, height];
   // Aim at the court's centre line.
   const yaw = deg(Math.atan2(-offsetX, COURT.halfLength + distBehind));
-  const pts = requiredPoints({ mode, farPlayer });
+  const ctx = { cam, yaw, pts: requiredPoints({ mode, farPlayer }), fov };
   let best = null;
-  const ok = [];
+  const ok = [], comfy = [];
   for (let p10 = 0; p10 <= 700; p10++) {
     const pitch = p10 / 10;
-    const basis = cameraBasis(pitch, yaw);
-    let margin = Infinity;
-    for (const { p } of pts) {
-      const q = project(p, cam, basis, fov);
-      if (!q) { margin = -Infinity; break; }
-      margin = Math.min(margin, 1 - Math.abs(q.u), 1 - Math.abs(q.v));
-    }
+    const margin = courtMargin(pitch, ctx);
     if (margin >= 0) ok.push(pitch);
+    if (margin >= minMargin) comfy.push(pitch);
     if (!best || margin > best.margin) best = { pitch, margin };
   }
   return {
@@ -132,7 +139,63 @@ export function solvePitch({ height, distBehind, offsetX = 0, mode, fov, farPlay
     yaw,
     margin: best.margin, // fraction of half-frame left spare at the tightest point
     pitchRange: ok.length ? [ok[0], ok[ok.length - 1]] : null,
+    // Highest aim (least tilt) that still leaves a little room around the court.
+    highestAim: comfy.length ? comfy[0] : null,
   };
+}
+
+// Highest point visible straight above ground point (x, y) – the top edge of the frame there.
+export function topOfFrameAt(x, y, { height, distBehind, offsetX = 0, pitch, yaw = 0, fov }) {
+  const cam = [offsetX, -distBehind, height];
+  const basis = cameraBasis(pitch, yaw);
+  let lo = 0, hi = 40;
+  for (let i = 0; i < 50; i++) {
+    const mid = (lo + hi) / 2;
+    const q = project([x, y, mid], cam, basis, fov);
+    if (q && q.v <= 1) lo = mid; else hi = mid;
+  }
+  return lo;
+}
+
+// Serve contact height, built up from the hand:
+//   standing fingertip reach        ≈ 1.33 × height
+//   centre of the gripping hand     ≈ 0.11 m below fingertip reach (fingers wrap the handle)
+//   hand centre → middle of strings = racket length − 0.07 m (hand sits ~7 cm up from
+//                                     the butt cap) − 0.17 m (string centre below the tip)
+//   arm and racket lean ~10° forward ("slightly in front"), plus any jump.
+export const HAND_FROM_BUTT = 0.07;
+export const STRINGS_FROM_TIP = 0.17;
+export function serveHeights({ playerHeight, racketLength, jump, tossAbove }) {
+  const handCentre = 1.33 * playerHeight - 0.11;
+  const handToStrings = racketLength - HAND_FROM_BUTT - STRINGS_FROM_TIP;
+  const contact = handCentre + handToStrings * Math.cos((10 * Math.PI) / 180) + jump;
+  return { contact, toss: contact + tossAbove };
+}
+
+// Where the server makes contact: ~0.3 m inside the baseline, ~0.75 m either side of centre.
+export const SERVE_SPOTS = { inside: 0.3, side: 0.75 };
+
+function serveVisibility(pitch, opts) {
+  const near = [-1, 1].map((sx) => topOfFrameAt(sx * SERVE_SPOTS.side, SERVE_SPOTS.inside, { ...opts, pitch }));
+  const far = [-1, 1].map((sx) => topOfFrameAt(sx * SERVE_SPOTS.side, COURT.length - SERVE_SPOTS.inside, { ...opts, pitch }));
+  return { near: Math.min(...near), far: Math.min(...far) };
+}
+
+// For each lens/zoom: keep the court in frame, and report how much of the serve each end shows
+// at the recommended tilt and at the highest aim the court allows.
+export function serveOptions({ height, distBehind, offsetX = 0, mode, lenses, farPlayer = true }) {
+  return lenses.map((lens) => {
+    const sol = solvePitch({ height, distBehind, offsetX, mode, fov: lens.fov, farPlayer });
+    if (!sol.fits) return { lens, fits: false };
+    const opts = { height, distBehind, offsetX, yaw: sol.yaw, fov: lens.fov };
+    const tilts = [{ kind: 'centred', pitch: sol.pitch }];
+    if (sol.highestAim != null && sol.highestAim < sol.pitch - 0.5) tilts.push({ kind: 'aim high', pitch: sol.highestAim });
+    return {
+      lens,
+      fits: true,
+      tilts: tilts.map((t) => ({ ...t, ...serveVisibility(t.pitch, opts) })),
+    };
+  });
 }
 
 // Full recommendation for one court end.

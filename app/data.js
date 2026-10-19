@@ -54,4 +54,9 @@ export const DEFAULT_SETTINGS = {
   handleLength: 1.1,
   stickAboveClamp: 0.8,
   farPlayer: true,
+  // Serve check
+  playerHeight: 1.83,
+  racketLength: 0.686,
+  jump: 0.2,
+  tossAbove: 0.6,
 };
