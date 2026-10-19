@@ -124,10 +124,14 @@
           <div class="seg scene-views">
             <button data-view="phone">Phone</button><button data-view="iso">3D</button><button data-view="top">Top</button><button data-view="side">Side</button><button data-view="stick">Stick</button>
           </div>
-          <button class="split-toggle on" id="splitToggle" aria-pressed="true" title="Show the phone's view under the 3D view">Split</button>
+        </div>
+        <div class="scene-bar scene-toggles">
+          <button class="chip" data-toggle="split" title="Show the phone's view under the 3D view">Split</button>
+          <button class="chip" data-toggle="cone" title="Viewing cone, ground covered, and red lines outside the frame">Cone</button>
+          <button class="chip" data-toggle="shadow" title="Far court seen only through the net mesh">Net shadow</button>
         </div>
       </div>
-      <p class="hint">Drag to orbit, pinch to zoom, two fingers to pan. Split shows the phone's view underneath. Change the setup on the Setup tab.</p>
+      <p class="hint">Drag to orbit, pinch to zoom, two fingers to pan. Split shows the phone's view underneath; Net shadow marks far court the camera only sees through the net. Change the setup on the Setup tab.</p>
     </section>
 
     <!-- COURTS -->

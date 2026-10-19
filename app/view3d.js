@@ -1,7 +1,7 @@
 // 3D view of the court, fences and phone. Loaded on demand when the 3D tab opens.
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
-import { COURT, cameraBasis, project } from './geometry.js';
+import { COURT, cameraBasis, project, netHeightAt } from './geometry.js';
 
 // App coordinates: x right, y down the court from the camera-end baseline, z up.
 // three.js: y up, so map (x, y, z) -> (x, z, -y).
@@ -14,6 +14,7 @@ const COLORS = {
   line: 0xffffff,
   lineOut: 0xe0402a, // court line outside the phone's frame
   cone: 0xff8a1f,
+  shadow: 0x2a0f3d,
   net: 0x1b1f1d,
   post: 0x2c3a33,
   wall: 0x9a5a43,
@@ -27,22 +28,30 @@ const PHONE = { long: 0.147, short: 0.0715, thick: 0.0074 }; // iPhone 12, lands
 
 let renderer, scene, cam, controls, root, container, hud, setup, frame = null;
 // What the phone sees: same position and tilt as the phone, its zoom's field of view, 16:9.
-let phoneCam, mode = 'orbit', split = true, phoneHud;
+let phoneCam, mode = 'orbit', phoneHud;
+// On/off switches under the view, remembered per device.
+const show = { split: true, cone: true, shadow: true };
+try { Object.assign(show, JSON.parse(localStorage.getItem('view3d') || '{}')); } catch { /* defaults */ }
 const VIDEO_ASPECT = 16 / 9;
 
 export function mount(el, s) {
   container = el;
-  renderer = new THREE.WebGLRenderer({ antialias: true });
+  // Log depth avoids flicker between the thin ground layers when viewed from far away.
+  renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   container.querySelector('.scene-canvas').appendChild(renderer.domElement);
   hud = container.querySelector('.scene-hud');
   phoneHud = container.querySelector('.phone-hud');
-  const toggle = container.querySelector('#splitToggle');
-  toggle.addEventListener('click', () => {
-    split = !split;
-    toggle.classList.toggle('on', split);
-    toggle.setAttribute('aria-pressed', String(split));
-    requestRender();
+  container.querySelectorAll('[data-toggle]').forEach((b) => {
+    const key = b.dataset.toggle;
+    const paint = () => { b.classList.toggle('on', show[key]); b.setAttribute('aria-pressed', String(show[key])); };
+    paint();
+    b.addEventListener('click', () => {
+      show[key] = !show[key];
+      paint();
+      try { localStorage.setItem('view3d', JSON.stringify(show)); } catch { /* private mode */ }
+      if (key === 'split') requestRender(); else update(setup);
+    });
   });
 
   scene = new THREE.Scene();
@@ -52,7 +61,7 @@ export function mount(el, s) {
   sun.position.set(-10, 20, 8);
   scene.add(sun);
 
-  cam = new THREE.PerspectiveCamera(45, 1, 0.05, 300);
+  cam = new THREE.PerspectiveCamera(45, 1, 0.1, 300);
   cam.layers.enable(OVERLAY); // the phone camera only sees layer 0, so no cone in its view
   phoneCam = new THREE.PerspectiveCamera(40, VIDEO_ASPECT, 0.1, 300);
   controls = new OrbitControls(cam, renderer.domElement);
@@ -80,7 +89,8 @@ export function update(s) {
   buildNet(root, s.court.net);
   buildFences(root, s);
   buildRig(root, s);
-  buildCone(root, s);
+  if (show.cone) buildCone(root, s);
+  if (show.shadow) buildNetShadow(root, s);
   scene.add(root);
   placePhoneCam(s);
   renderHud();
@@ -115,8 +125,8 @@ function buildCourt(g, s) {
   const near = s.court.ends[s.endKey], far = s.court.ends[s.endKey === 'A' ? 'B' : 'A'];
   const L = COURT.length, hw = COURT.doublesHalfWidth, sw = COURT.singlesHalfWidth;
   const halfOuter = hw + SIDE_RUNOFF;
-  g.add(flatBox(-halfOuter - 2, halfOuter + 2, -near.runback - 2, L + far.runback + 2, -0.004, 0x6f7f74));
-  g.add(flatBox(-halfOuter, halfOuter, -near.runback, L + far.runback, -0.002, COLORS.surround));
+  g.add(flatBox(-halfOuter - 2, halfOuter + 2, -near.runback - 2, L + far.runback + 2, -0.03, 0x6f7f74));
+  g.add(flatBox(-halfOuter, halfOuter, -near.runback, L + far.runback, -0.015, COLORS.surround));
   g.add(flatBox(-hw, hw, 0, L, 0, COLORS.court));
 
   const lines = [];
@@ -131,7 +141,7 @@ function buildCourt(g, s) {
   line(-0.025, 0.025, 0, 0.1); // centre marks
   line(-0.025, 0.025, L - 0.1, L);
   // Split each line into runs inside / outside the phone's frame; outside runs are red.
-  const inFrame = frameTest(s);
+  const inFrame = show.cone ? frameTest(s) : () => true;
   for (const [x0, x1, y0, y1] of lines) {
     const alongX = x1 - x0 > y1 - y0;
     const len = alongX ? x1 - x0 : y1 - y0;
@@ -143,8 +153,8 @@ function buildCourt(g, s) {
       if (now === inside) continue;
       const t0 = start, t1 = i / n;
       const color = inside ? COLORS.line : COLORS.lineOut;
-      g.add(alongX ? flatBox(x0 + (x1 - x0) * t0, x0 + (x1 - x0) * t1, y0, y1, 0.002, color)
-                   : flatBox(x0, x1, y0 + (y1 - y0) * t0, y0 + (y1 - y0) * t1, 0.002, color));
+      g.add(alongX ? flatBox(x0 + (x1 - x0) * t0, x0 + (x1 - x0) * t1, y0, y1, 0.01, color)
+                   : flatBox(x0, x1, y0 + (y1 - y0) * t0, y0 + (y1 - y0) * t1, 0.01, color));
       start = i / n;
       inside = now;
     }
@@ -332,7 +342,7 @@ function buildCone(g, s) {
       new THREE.MeshBasicMaterial({ color: COLORS.cone, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide }));
     // Shape is drawn in the x/y plane; lay it flat on the ground (app y -> three −z).
     fill.rotation.x = -Math.PI / 2;
-    fill.position.y = 0.006;
+    fill.position.y = 0.025;
     footprint.add(fill);
     for (let i = 0; i < poly.length; i++) {
       const [a, b] = [poly[i], poly[(i + 1) % poly.length]];
@@ -344,6 +354,43 @@ function buildCone(g, s) {
     o.traverse((c) => c.layers.set(OVERLAY));
     g.add(o);
   }
+}
+
+// ---------- net shadow ----------
+
+// Ground beyond the net that the phone only sees through the mesh: for each point along
+// the net tape, the sight line over the tape lands on the ground further back; everything
+// between the net and that landing point is behind the net.
+function buildNetShadow(g, s) {
+  const { r, offset = 0 } = s;
+  const net = s.court.net;
+  const C = [offset, -r.distBehind + 0.06, r.height];
+  const far = s.court.ends[s.endKey === 'A' ? 'B' : 'A'];
+  const yMax = COURT.length + far.runback;
+  const yNet = COURT.halfLength, px = COURT.postHalfWidth;
+  const edge = [];
+  const n = 64;
+  for (let i = 0; i <= n; i++) {
+    const xn = -px + (2 * px * i) / n;
+    const h = netHeightAt(xn, net);
+    // Point on the tape, then extend the ray from the camera through it down to the ground.
+    const k = h < C[2] ? C[2] / (C[2] - h) : Infinity;
+    let gx = C[0] + (xn - C[0]) * k, gy = C[1] + (yNet - C[1]) * k;
+    if (!(gy <= yMax)) { // capped at the far fence
+      const kf = (yMax - C[1]) / (yNet - C[1]);
+      gx = C[0] + (xn - C[0]) * kf;
+      gy = yMax;
+    }
+    edge.push([gx, gy]);
+  }
+  const poly = [[-px, yNet], [px, yNet], ...edge.reverse()];
+  const shape = new THREE.Shape(poly.map(([x, y]) => new THREE.Vector2(x, y)));
+  const mesh = new THREE.Mesh(new THREE.ShapeGeometry(shape),
+    new THREE.MeshBasicMaterial({ color: COLORS.shadow, transparent: true, opacity: 0.4, depthWrite: false, side: THREE.DoubleSide }));
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.position.y = 0.03;
+  mesh.layers.set(OVERLAY);
+  g.add(mesh);
 }
 
 // A thin cylinder from a to b (three.js vectors), radius rA at a and rB at b.
@@ -449,7 +496,7 @@ function render() {
     return;
   }
 
-  if (!split) {
+  if (!show.split) {
     drawOrbit(0, 0, w, h);
     phoneHud.hidden = true;
     return;
