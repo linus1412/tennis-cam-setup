@@ -81,10 +81,14 @@ $('#height').addEventListener('input', (e) => {
 $('#offset').addEventListener('input', (e) => { state.offset = parseFloat(e.target.value) || 0; update(); });
 $('#farPlayer').addEventListener('change', (e) => { settings.farPlayer = e.target.checked; saveSettings(); update(); });
 
-// Highest camera height possible at this end: clamp at the fence top (or as high as
-// you can reach) and the stick lifts the phone above that.
-function maxHeightFor(end) {
-  return Math.min(end.fenceHeight, settings.maxClampHeight) + settings.stickAboveClamp;
+// Highest camera height possible at this end: hook over the top rail if the handle
+// can get the fork up there, otherwise clamp to the mesh as high as you can reach.
+function mountFor(end) {
+  if (end.fenceHeight <= settings.maxRailHeight) {
+    return { height: end.fenceHeight + settings.stickAboveClamp, how: `Hook the fork over the ${fmt(end.fenceHeight, 1)} m top rail` };
+  }
+  const clamp = Math.min(settings.maxClampHeight, end.fenceHeight);
+  return { height: clamp + settings.stickAboveClamp, how: `Fence too tall to reach the top: clamp the fork to the mesh at ~${fmt(clamp, 1)} m with the rear knob` };
 }
 
 function update(syncHeightField = true) {
@@ -94,44 +98,42 @@ function update(syncHeightField = true) {
   const lenses = phoneLenses(settings.phone);
   const base = { end, net: court.net, mode: settings.mode, lenses, offsetX: state.offset, farPlayer: settings.farPlayer };
 
-  const recHeight = maxHeightFor(end);
+  const mount = mountFor(end);
+  const recHeight = mount.height;
   const height = state.height ?? recHeight;
   if (syncHeightField) $('#height').value = fmt(height);
   const r = recommend({ ...base, maxHeight: height });
   state.target = r.chosen.pitch;
-  renderResult(r, { court, end, recHeight });
+  renderResult(r, { end, recHeight, mount });
   renderSide(r, court);
 }
 
-function renderResult(r, { end, recHeight }) {
+function renderResult(r, { end, recHeight, mount }) {
   const lens = r.chosen;
   const msgs = [];
+  if (state.height == null) msgs.push(['info', `${mount.how}, top section fully raised.`]);
   if (r.heightOk) {
     msgs.push(['ok', `Far service line clears the net by ${Math.round(r.clearance * 100)} cm.`]);
   } else if (r.clearance > 0) {
-    msgs.push(['warn', `Far service line only just clears the net (${Math.round(r.clearance * 100)} cm). Aim for ${fmt(r.minHeight)} m or more.`]);
+    msgs.push(['warn', `Far service line only just clears the net tape. Aim for ${fmt(r.minHeight)} m or more for a clear view.`]);
   } else {
     msgs.push(['warn', `Too low to see the far service line over the net. Need at least ${fmt(r.minHeight)} m (net hides it by ${Math.round(-r.clearance * 100)} cm).`]);
   }
   if (recHeight < r.minHeight) {
     msgs.push(['warn', `At this end the stick tops out at ${fmt(recHeight)} m – short of the ${fmt(r.minHeight)} m recommended.`]);
   }
-  if (r.height > end.fenceHeight) {
-    msgs.push(['info', `Camera is ${fmt(r.height - end.fenceHeight)} m above the ${fmt(end.fenceHeight, 1)} m fence top.`]);
-  }
   if (!lens.fits) {
     msgs.push(['warn', `Even ${lens.name} can't fit the whole ${settings.mode} court from here.`]);
   } else {
-    const other = r.lenses.find((l) => l !== lens);
-    if (other && !other.fits) msgs.push(['info', `${other.name} is too narrow from ${fmt(r.distBehind)} m behind the baseline.`]);
-    if (lens.pitchRange) msgs.push(['info', `Anything from ${fmt(lens.pitchRange[0], 0)}° to ${fmt(lens.pitchRange[1], 0)}° keeps the court in frame; ${fmt(lens.pitch, 0)}° centres it.`]);
+    msgs.push(['info', `Zoom ${lens.id} is the tightest that keeps all four corners in view from ${fmt(r.distBehind)} m back.`]);
+    if (lens.pitchRange) msgs.push(['info', `Anything from ${fmt(lens.pitchRange[0], 0)}° to ${fmt(lens.pitchRange[1], 0)}° keeps the court in frame; ${fmt(lens.pitch, 0)}° leaves the most room at the edges.`]);
   }
 
   $('#result').innerHTML = `
     <div class="stats">
       <div class="stat"><b>${fmt(r.height)}<small> m</small></b><span>Height</span></div>
       <div class="stat"><b>${fmt(lens.pitch, 0)}°</b><span>Tilt down</span></div>
-      <div class="stat"><b>${lens.id}</b><span>Lens</span></div>
+      <div class="stat"><b>${lens.id}</b><span>Zoom</span></div>
     </div>
     <ul class="msgs">${msgs.map(([c, t]) => `<li class="${c}">${t}</li>`).join('')}</ul>
     <div class="actions"><button class="primary" id="goLevel">Set phone to ${fmt(lens.pitch, 0)}° →</button></div>`;
@@ -283,7 +285,7 @@ $('#deleteCourt').addEventListener('click', () => {
   update();
 });
 
-for (const [id, key] of [['#maxClamp', 'maxClampHeight'], ['#stickAbove', 'stickAboveClamp']]) {
+for (const [id, key] of [['#maxRail', 'maxRailHeight'], ['#maxClamp', 'maxClampHeight'], ['#stickAbove', 'stickAboveClamp']]) {
   $(id).addEventListener('input', (e) => {
     const v = parseFloat(e.target.value);
     if (!(v >= 0)) return;
@@ -325,6 +327,7 @@ function escapeHtml(s) {
 fillCourtSelects();
 $('#phone').value = settings.phone;
 $('#farPlayer').checked = settings.farPlayer;
+$('#maxRail').value = settings.maxRailHeight;
 $('#maxClamp').value = settings.maxClampHeight;
 $('#stickAbove').value = settings.stickAboveClamp;
 loadForm(currentCourt());

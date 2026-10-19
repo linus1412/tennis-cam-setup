@@ -137,3 +137,66 @@ General formulas for the PWA, with a ground-plane point at forward distance Y an
 15. MDN, DeviceOrientationEvent.requestPermission() — https://developer.mozilla.org/en-US/docs/Web/API/DeviceOrientationEvent/requestPermission_static
 16. "Using HTML5 accelerometer and gyroscope in 2020" — https://yal.cc/js-device-motion/
 17. Apple Developer Forums, "Unable to check DeviceOrientationEvent" — https://developer.apple.com/forums/thread/128376
+
+---
+
+## Swing Stick 1st gen — physical details
+
+Researched 2026-10-19 (second pass). This supersedes the "mostly UNCONFIRMED" table in §1. Confidence: **High** means an official SwingVision image or statement, **Med** means a consistent third-party report or a careful inference, and **Low** means an estimate.
+
+### Headline numbers
+
+| Item | Value | Confidence | Source |
+|---|---|---|---|
+| Pole length | **22" collapsed → 72" extended (56–183 cm)**, telescoping | High | Official diagram [S1] |
+| Sections / locks | 4 flip locks: **1 above the fork** (raises the phone) and **3 below the fork** (extend the handle downward), so about 5 tube sections | High (lock layout) / Med (section count) | Diagram [S1]; official setup video [S3]; unboxing [S4] ("it's got three") |
+| Upward extension, top of fork collar → phone-holder joint | **24"** in the official "Swing Stick Extended" photo (2nd Gen photo: 22") | High | [S2], [S6] |
+| **Fence top rail → phone camera, upper section fully extended** | **≈ 0.8 m (31–33"); range 0.75–0.90 m** | Med (photo estimate) | Pixel measurement, below |
+| Fence top rail → phone camera, upper section collapsed | ≈ 0.23 m (≈ 9"); range 0.18–0.30 m | Low–Med | Pixel measurement, below |
+| Shipping box | 26.78 × 7 × 3, weight 2.857 (units not given; almost certainly in and lb, so 68 × 18 × 7.6 cm and 1.3 kg boxed). 2nd Gen: 26.5 × 7 × 3, 2.4 | High (values) / Med (units) | SwingVision product API [S5] |
+
+### 1. How it attaches
+
+- **Primary method: a "fork" hooks down over the fence top rail.** The fork is a moulded bracket clamped to the pole. It has two prongs that straddle the top rail, with the pole hanging down on the court side. Official setup video: "If you're playing outdoors secure the fork on top of the fence. You can also bend the fork with your hands in case the fence is too thick or too thin" [S3]. The product photos show the fork seated on a chain-link top rail [S2]. Unboxing: "this part here clips on top of the fence… then you just hook this bit over the fence" [S4]. Confidence: High.
+- **Backup method: partway down on the chain-link mesh.** "As a backup you can also attach the Swing Stick lower to the ground on any diamond using the rear knob" [S3]. The printed instructions, read aloud in [S4], say "on the fence itself using the rear diamond knob". The rear knob is a screw clamp on the back of the fork that grips a mesh diamond. **So the stick does NOT have to sit on the fence top.** It can clamp at any height on chain-link mesh. SwingVision frames this as a fallback, not the recommended method. Confidence: High.
+- **Indoors:** "attach by sliding the curtain against the back of the fork". A "curtain stabilizer" fin sits under the fork [S1][S3]. It can rotate on curtains, hence the third-party MakerWorld stabilizer noted in §1.
+- **Lineage of the design.** SwingVision calls it "our patented phone mount". The only mount patent owned by SwingVision's company (Mangolytics, Inc.) is **US 8,152,389 B1, "Camera support apparatus"** (Mike Lammens, filed 2010). It was assigned to Mangolytics nunc pro tunc in February 2023, a month before the Swing Stick launched [S7]. The patent describes an inverted-U, two-finger spring clip that slides over a fence top rail with the chain-link mesh trapped between one finger and the rail. Patent figures: about 2.0" finger gap, 3.5" fingers, a 1.653" rail with 0.462" mesh, and about 2.3 lbf clamp. A telescoping aluminium extension pole with collet clamps lets one person hang the clip "on a tennis court fence structure… about twelve feet" without a ladder. The patent covers the concept; the Swing Stick's actual fork is a plastic moulding with a knob, so the dimensions are indicative only. Confidence: High that it is the patent, Med that it describes the 1st-gen fork.
+
+### 2. Geometry and the attachment-to-camera height
+
+**How the pole works.** The fork sits near the top of the pole. The sections **below** the fork telescope downward to form a long handle, which lets you lift the fork onto a rail above head height. The single section **above** the fork telescopes upward to raise the phone: "open the flip locks below the fork to extend the pole… to get an even higher viewpoint open the flip lock above the fork to extend the pole upwards" [S3]. Only the upper section changes the camera height above the rail. A user who has recorded about 200 matches recommends "this last adjustment height extended as much as possible… gives a better perspective" [S8].
+
+**Estimating camera height from the official photos.** No direct measurement exists, so these are pixel measurements.
+- **Extended photo [S2]:** the 24" scale bar spans about 410 px in the original 1125-px image, so about 17 px/in. The bar runs from the top of the flip-lock collar just above the fork to the holder/tilt-knob joint.
+  - The rear-camera lens cluster sits about 5–6" above the top of the bar. The phone is landscape in a clamp holder with about 1" of clamp below it.
+  - The bottom of the bar sits about 2.5–3.5" above the top of the rail (the fork's own height).
+  - Total: 24 + 5.5 + 3 ≈ **32" ≈ 0.81 m** from rail top to lens.
+  - Cross-check: the phone's measured vertical extent (an iPhone 13 Pro, tilted in-plane) agrees with its known size to within about 15%. Range **0.75–0.90 m**.
+- **Collapsed photo [S2]:** the scale comes from the phone's long edge (146.7 mm ≈ 372 px in a 2× crop). The lens is about 580 px, or **about 23 cm (9")**, above the top of the rail. The shot looks steeply upward, which shortens vertical distances, so take 0.18–0.30 m.
+- The 2nd Gen photo shows 22" from the collar to the bottom of the holder [S6], consistent with the 1st Gen.
+- The earlier "~2 ft above fence" figure [6] matches the 24" pole extension, not the lens height. **For the PWA use camera = fence top + 0.8 m (range 0.75–0.9 m) when the stick is fully raised**, or +0.25 m when the upper section is collapsed.
+
+### 3. Tilt mechanism
+
+- **Single-axis tilt pivot** under the phone holder, locked by a thumb **"tilt knob"** (a friction clamp, not detents) [S1]. Confidence: High.
+- **Alignment markings:** the official instruction is "tilt the phone forward until the marking on the right lines up with the **bottommost marking on the left**; tighten the knob to secure" [S3]. A user describes "three markers… you have to figure out which one works for your court"; he sets his line "just below the bottommost" mark [S8]. So there is one index mark and **three reference marks**, with continuous adjustment between them. Confidence: Med–High.
+- **What the marks mean in degrees: UNCONFIRMED.** The predecessor patent says the marked preset for a tennis court is a line of sight "approximately 15 degrees" to the court surface, for a 12 ft rail [S7]. The Swing Stick's three marks are probably presets around that value. Total tilt range: **UNCONFIRMED**.
+- The phone holder can be mounted facing either way on the pivot; [S8] prefers the phone hanging against the fixture for safety.
+- In-app tips the app shows when framing is wrong: "Set up higher on the fence", "Tilt your device farther down/up", "Center your device", "Fit the entire court in view" (`/locales/en/remote_control.json`). The app warns of a "Suboptimal Setup" in which "shot speeds and line calls may be inaccurate". The 2nd Gen replaces the knob with a motorised "control head".
+
+### 4. Tall fences (5–6 m / 18–20 ft)
+
+- **Reach limit (inference, Med):** about 48" of handle below the fork plus a person's overhead reach of about 2.1–2.3 m lets you hook the fork onto a rail at roughly **3.3–3.6 m (11–12 ft)**. The patent's design case is a 12 ft fence. A user notes the fully extended pole is "an awkward thing" and extends it one section at a time before hooking it on [S8].
+- **Beyond that, use the official fallback:** clamp the fork to a mesh diamond with the rear knob at a height you can reach [S3], so the camera is at the clamp height plus about 0.8 m. Alternatives are a ladder, or hooking onto a lower horizontal rail if the fence has one (common on 18–20 ft fences). No SwingVision source mentions doing this.
+- **SwingVision publishes no maximum or minimum fence height.** The only guidance is directional: higher is better ("Set up higher on the fence" in-app; "you really want it to get really high" [S4]).
+- I found no Reddit (r/10s, r/swingvisionapp; the API returned 403), Tennis Warehouse or Amazon material on tall fences. The Swing Stick is sold only via swing.vision, and eBay returned 403.
+
+### Sources (this section)
+- S1. Official diagram, `https://swing.vision/images/order/swing-stick-diagram.png` (alt "Swing Stick Diagram"). Labels: tilt knob, flip locks, rear knob, fork, curtain stabilizer, pole, sunshade, "22" - 72"".
+- S2. Official photos, `https://swing.vision/images/order/swing-stick-extended.png` ("Swing Stick Extended", 24" bar) and `.../swing-stick-collapsed.png` ("Swing Stick Collapsed"). Gallery array `xne` in `swing.vision/static/js/main.48159186.js`.
+- S3. SwingVision, "How to Set Up Your SwingVision Recording for Tennis or Pickleball", https://www.youtube.com/watch?v=-sQ_XP1HxXs (auto transcript, 1:01–2:10).
+- S4. "Swing Stick Unboxing by SwingVision", https://www.youtube.com/watch?v=2MjI_SXzMuE (user video; includes the printed instructions read aloud).
+- S5. SwingVision product API, `https://api.swing.tennis/v1/products/available` (fields length/width/height/weight; `swing-stick` bundle created 2023-02-09, $99.99 list price).
+- S6. Official 2nd Gen photo, `https://swing.vision/images/order/ss2g-height-measure.png` (22"), and `ss2g-diagram.png`.
+- S7. US 8,152,389 B1, "Camera support apparatus", https://patents.google.com/patent/US8152389B1/en (current assignee Mangolytics Inc.; reel/frame 062773/0413).
+- S8. "Mastering SwingVision Mount Setup: Tips & Tricks for Perfect Tennis Recording", https://www.youtube.com/watch?v=9pIStuFs_Mo (user, about 200 matches recorded).

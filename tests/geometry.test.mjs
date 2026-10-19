@@ -5,8 +5,8 @@ import { tiltFromOrientation } from '../app/sensor.js';
 
 const net = { post: 1.06, centre: 0.895 };
 const lenses = [
-  { id: '1x', eqFocal: 26, fov: lensFov(26) },
-  { id: '0.5x', eqFocal: 13, fov: lensFov(13) },
+  { id: '1.0×', eqFocal: 26, fov: lensFov(26) },
+  { id: '0.5×', eqFocal: 13, fov: lensFov(13) },
 ];
 
 test('lens FOV for 16:9 video', () => {
@@ -23,7 +23,7 @@ test('min height to see far service line over the net (Court 1, end A)', () => {
 
 test('Court 1 needs the ultra-wide for doubles', () => {
   const r = recommend({ end: { runback: 4.72 }, net, mode: 'doubles', lenses, maxHeight: 4 });
-  assert.equal(r.chosen.id, '0.5x');
+  assert.equal(r.chosen.id, '0.5×');
   assert.ok(r.chosen.fits);
 });
 
