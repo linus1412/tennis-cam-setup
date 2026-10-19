@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Court Cam</title>
+  <meta name="description" content="Camera height and tilt for SwingVision court setup">
+  <meta name="theme-color" content="#0f1a14">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Court Cam">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <h1>Court Cam</h1>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="setup" aria-selected="true">Setup</button>
+      <button role="tab" data-tab="level">Level</button>
+      <button role="tab" data-tab="courts">Courts</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- SETUP -->
+    <section id="tab-setup" class="tab">
+      <div class="card">
+        <label class="field">
+          <span>Court</span>
+          <select id="court"></select>
+        </label>
+        <div class="field">
+          <span>Camera end</span>
+          <div class="seg" id="end">
+            <button data-v="A">End A</button><button data-v="B">End B</button>
+          </div>
+        </div>
+        <div class="field">
+          <span>Playing</span>
+          <div class="seg" id="mode">
+            <button data-v="singles">Singles</button><button data-v="doubles">Doubles</button>
+          </div>
+        </div>
+        <label class="field">
+          <span>Phone</span>
+          <select id="phone"></select>
+        </label>
+        <label class="field">
+          <span>Camera height (m)</span>
+          <input id="height" type="number" step="0.05" min="0.5" max="8" inputmode="decimal">
+        </label>
+        <details class="more">
+          <summary>More options</summary>
+          <label class="field">
+            <span>Sideways offset from centre (m, + = right)</span>
+            <input id="offset" type="number" step="0.1" inputmode="decimal" value="0">
+          </label>
+          <label class="field check">
+            <input id="farPlayer" type="checkbox">
+            <span>Keep the far player fully in frame</span>
+          </label>
+        </details>
+      </div>
+
+      <div class="card result" id="result"></div>
+      <div class="card"><svg id="side" viewBox="0 0 360 150" role="img" aria-label="Side view of camera and court"></svg></div>
+    </section>
+
+    <!-- LEVEL -->
+    <section id="tab-level" class="tab" hidden>
+      <div class="card level">
+        <p class="hint" id="levelHint">Put the phone in the holder, rear camera facing the court, in landscape. Hold the stick upright.</p>
+        <button class="primary" id="enableSensors">Start tilt sensor</button>
+        <div id="gauge" hidden>
+          <div class="target">Target <b id="targetVal">–</b> down</div>
+          <div class="big" id="tiltVal">–</div>
+          <div class="delta" id="deltaVal"></div>
+          <div class="roll"><div class="bubble" id="bubble"></div></div>
+          <div class="rollVal" id="rollVal"></div>
+          <label class="field inline">
+            <span>Target (°)</span>
+            <input id="targetInput" type="number" step="0.5" inputmode="decimal">
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- COURTS -->
+    <section id="tab-courts" class="tab" hidden>
+      <div class="card">
+        <div class="row">
+          <select id="editCourt"></select>
+          <button id="newCourt">New</button>
+        </div>
+        <form id="courtForm" class="grid">
+          <label class="field"><span>Club</span><input name="club"></label>
+          <label class="field"><span>Court name</span><input name="name" required></label>
+          <h3>Net height (m)</h3>
+          <label class="field"><span>At post</span><input name="netPost" type="number" step="0.005" inputmode="decimal"></label>
+          <label class="field"><span>Centre</span><input name="netCentre" type="number" step="0.005" inputmode="decimal"></label>
+          <h3>End A</h3>
+          <label class="field"><span>Baseline → fence (m)</span><input name="aRunback" type="number" step="0.01" inputmode="decimal"></label>
+          <label class="field"><span>Fence height (m)</span><input name="aFence" type="number" step="0.05" inputmode="decimal"></label>
+          <h3>End B</h3>
+          <label class="field"><span>Baseline → fence (m)</span><input name="bRunback" type="number" step="0.01" inputmode="decimal"></label>
+          <label class="field"><span>Fence height (m)</span><input name="bFence" type="number" step="0.05" inputmode="decimal"></label>
+          <div class="row">
+            <button class="primary" type="submit">Save</button>
+            <button type="button" id="deleteCourt" class="danger">Delete</button>
+          </div>
+        </form>
+      </div>
+      <div class="card">
+        <h3>Equipment</h3>
+        <label class="field"><span>Highest you can clamp the stick on a fence (m)</span>
+          <input id="maxClamp" type="number" step="0.05" inputmode="decimal"></label>
+        <label class="field"><span>Phone height above the clamp (m)</span>
+          <input id="stickAbove" type="number" step="0.05" inputmode="decimal"></label>
+      </div>
+      <div class="card">
+        <h3>Share courts</h3>
+        <p class="hint">Copy a link that loads your courts on another phone.</p>
+        <button id="shareCourts">Copy share link</button>
+        <span id="shareMsg" class="hint"></span>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
